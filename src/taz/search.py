@@ -92,28 +92,57 @@ async def _navigate_with_retry(page: Page, url: str) -> None:
 
 
 async def _parse_results_page(page: Page) -> list[TazSearchResult]:
-    """Extract search results from the current page."""
+    """Extract search results from the current page.
+
+    taz.de result structure:
+        <article class="article-teaser">
+          <a href="/path/!ID&s=query/" class="columns teaser-link">
+            <div>  <!-- image column -->
+            <div>  <!-- text column -->
+              <div>
+                <h3>
+                  <span>Topline</span>
+                  <span class="headline ...">Headline</span>
+                </h3>
+              </div>
+              <p>Teaser text</p>
+              <p>22.3.2026</p>
+            </div>
+          </a>
+        </article>
+    """
     results: list[TazSearchResult] = []
 
-    # Each result has an h3 with an <a> link, followed by <p> elements
-    headings = await page.query_selector_all("h3 > a")
+    articles = await page.query_selector_all("article.article-teaser")
 
-    for link_el in headings:
-        href = await link_el.get_attribute("href")
-        title = (await link_el.inner_text()).strip()
-
-        if not href or not title:
+    for article in articles:
+        # The entire article is wrapped in a single <a> tag
+        link_el = await article.query_selector("a[href]")
+        if link_el is None:
             continue
 
-        # Build absolute URL, strip search parameter from href
+        href = await link_el.get_attribute("href")
+        if not href:
+            continue
+
         url = _build_absolute_url(href)
 
-        # Find the parent container and look for date in sibling <p> elements
-        h3_el = await link_el.evaluate_handle("el => el.closest('h3')")
-        container = await h3_el.evaluate_handle("el => el.parentElement")
+        # Title from the headline span inside h3
+        headline_el = await article.query_selector("h3 span.headline")
+        if headline_el is None:
+            # Fallback: use full h3 text
+            h3_el = await article.query_selector("h3")
+            if h3_el is None:
+                continue
+            title = (await h3_el.inner_text()).strip()
+        else:
+            title = (await headline_el.inner_text()).strip()
 
-        # Get all <p> elements in the container
-        p_elements = await container.query_selector_all("p")
+        if not title:
+            continue
+
+        # Find date in <p> elements
+        p_elements = await article.query_selector_all("p")
         article_date = None
         for p_el in p_elements:
             text = await p_el.inner_text()
