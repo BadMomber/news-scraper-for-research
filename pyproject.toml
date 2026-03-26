@@ -1,0 +1,8 @@
+[project]
+name = "marianne-crawler"
+version = "0.1.0"
+description = "Python crawler for searching taz.de, zeit.de, and heise.de for keyword-matched articles"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

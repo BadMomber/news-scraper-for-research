@@ -1,0 +1,30 @@
+search_terms:
+  grok_skandale:
+    - ["Grok", "Hitler"]
+    - ["Grok", "Deepfake"]
+    - ["Grok", "Verantwortung"]
+    - ["Grok", "Elon Musk"]
+    - ["Grok", "X"]
+    - ["Grok", "xAI"]
+  intersektion_ki_grok:
+    - ["Künstliche Intelligenz", "Hitler"]
+    - ["Künstliche Intelligenz", "Deepfake"]
+    - ["Künstliche Intelligenz", "Verantwortung"]
+    - ["Künstliche Intelligenz", "Elon Musk"]
+    - ["Künstliche Intelligenz", "X"]
+    - ["Künstliche Intelligenz", "xAI"]
+  meta_diskurs:
+    - ["Künstliche Intelligenz", "EU"]
+    - ["Künstliche Intelligenz", "Digital Service Act"]
+    - ["Künstliche Intelligenz", "Regulierung"]
+    - ["Künstliche Intelligenz", "Verbot"]
+    - ["Künstliche Intelligenz", "Sicherheit"]
+
+target_sites:
+  - https://taz.de
+  - https://www.zeit.de
+  - https://www.heise.de
+
+date_range:
+  start: "2025-07-08"
+  end: "2026-02-08"
