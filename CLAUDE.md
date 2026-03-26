@@ -1,4 +1,4 @@
-# Marianne Crawler
+# News Scraper for Research
 
 ## Tech Stack
 

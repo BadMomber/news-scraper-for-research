@@ -1,5 +1,5 @@
 {
-  description = "Marianne Crawler – Python news article search crawler";
+  description = "News Scraper for Research – Python news article search crawler";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -24,7 +24,7 @@
           ];
 
           shellHook = ''
-            echo "Marianne Crawler dev shell"
+            echo "News Scraper dev shell"
             echo "Python: $(python --version)"
 
             # Local venv for pip-only packages (e.g. claude-agent-sdk)

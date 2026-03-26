@@ -65,7 +65,19 @@ Tests liegen in `tests/` und spiegeln die Modulstruktur.
 - [ ] CSV-Export hat Tests für UTF-8, Semikolon-Trennung in Used Search Terms
 - [ ] Paywall-Fallback hat Tests für jede Stufe
 
-### Phase 4: Verifikation
+### Phase 4: Smoke Test
+
+Führe einen Live-Test gegen die echte Zielseite durch:
+
+1. Erstelle ein temporäres Smoke-Test-Skript (nicht committen)
+2. Teste mit 2–3 Keyword-Paaren aus der Konfiguration
+3. Prüfe: Werden Ergebnisse gefunden? Sind Titel, URLs und Daten plausibel?
+4. Falls der Smoke Test fehlschlägt: Parser/Selektoren gegen die echte DOM-Struktur korrigieren, Unit-Tests und Fixtures anpassen, erneut testen
+5. Lösche das Smoke-Test-Skript nach erfolgreicher Verifikation
+
+Der Smoke Test ist Pflicht — Unit-Tests mit Fixtures allein reichen nicht, da sich HTML-Strukturen der Zielseiten von den Fixtures unterscheiden können.
+
+### Phase 5: Verifikation
 
 Gleiche die Implementierung gegen Anforderungen.md ab:
 
@@ -79,11 +91,11 @@ Führe alle Tests aus und bestätige, dass sie grün sind:
 pytest -v
 ```
 
-### Phase 5: Code Review
+### Phase 6: Code Review
 
 Führe den `/simplify` Skill aus. Behebe relevante Findings.
 
-### Phase 6: AP.md aktualisieren
+### Phase 7: AP.md aktualisieren
 
 Markiere die erledigten Aufgaben im Arbeitspaket in `AP.md` mit `[x]`.
 
