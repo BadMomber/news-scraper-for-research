@@ -37,7 +37,7 @@ Untersuche den bestehenden Code:
 Stelle gezielte Rückfragen:
 - Sollen HTTP-Requests in Tests gemockt oder gegen echte Seiten ausgeführt werden?
 - Gibt es Testdaten (HTML-Fixtures) die erstellt werden müssen?
-- Soll es Smoke Tests gegen die echten Seiten geben?
+- Smoke Tests gegen die echten Seiten sind Pflicht (siehe Verhaltensregeln)
 
 ### Schritt 4: Testplan erstellen
 
@@ -90,4 +90,5 @@ Stelle sicher, dass jedes Akzeptanzkriterium der Spezifikation durch mindestens 
 - **Fachliche Gruppierung:** Tests nach fachlichen Bereichen gruppieren (z.B. "Suchfunktion", "Artikel-Parsing", "Paywall"), nicht nach technischen Schichten.
 - **Happy Paths und Edge Cases:** Jedes Akzeptanzkriterium braucht einen Happy-Path-Test. Für Fehlerszenarien (Timeout, 404, leere Suche) eigene Edge-Case-Tests.
 - **Vollständigkeit über Minimalismus:** Lieber einen Test zu viel als eine Lücke.
+- **Smoke Tests sind Pflicht:** Jedes site-spezifische AP muss einen Smoke Test gegen die echte Seite enthalten (2–3 Keyword-Paare). HTML-Strukturen der Zielseiten können von Fixtures abweichen — nur der Live-Test deckt das auf.
 - **Fixtures dokumentieren:** Welche HTML-Dateien oder Mock-Responses als Testdaten benötigt werden.
