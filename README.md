@@ -1,4 +1,4 @@
-# Marianne Crawler
+# News Scraper for Research
 
 Python-Crawler, der auf taz.de, zeit.de und heise.de nach Artikeln sucht, die zu definierten Keyword-Paaren passen, und die Ergebnisse als deduplizierte CSV ausgibt.
 
