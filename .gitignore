@@ -4,3 +4,4 @@ __pycache__/
 .direnv/
 .DS_Store
 .pytest_cache/
+.claude/skills/

@@ -15,12 +15,12 @@
 
 > taz.de hat keine Paywall → idealer Startpunkt und Proof of Concept
 
-## AP2b: taz.de Artikeldetails
-- [ ] Artikel-Detailseite scrapen: Autor extrahieren
-- [ ] Artikeltext extrahieren (reiner Inhalt, ohne Navigation/Werbung)
-- [ ] Character Count berechnen
-- [ ] Datenstruktur mit allen Feldern zusammenführen
-- [ ] Test mit Artikeln aus AP2a
+## AP2b: taz.de Artikeldetails ✅
+- [x] Artikel-Detailseite scrapen: Autor extrahieren
+- [x] Artikeltext extrahieren (reiner Inhalt, ohne Navigation/Werbung)
+- [x] Character Count berechnen
+- [x] Datenstruktur mit allen Feldern zusammenführen
+- [x] Test mit Artikeln aus AP2a
 
 ## AP3a: heise.de Suche
 - [ ] Suchfunktion von heise.de analysieren (URL-Schema, Parameter)

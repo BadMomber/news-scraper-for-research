@@ -4,6 +4,7 @@ import logging
 from playwright.async_api import async_playwright
 
 from src.config import load_config
+from src.taz import scrape_articles as taz_scrape
 from src.taz import search as taz_search
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -23,22 +24,26 @@ async def run():
         browser = await pw.chromium.launch(headless=True)
         try:
             # --- taz.de ---
-            all_taz_results = []
+            all_taz_articles = []
             for pair in pairs:
                 results = await taz_search(
                     browser, pair, config.date_start, config.date_end,
                 )
-                all_taz_results.extend(results)
+                if results:
+                    articles = await taz_scrape(browser, results, pair)
+                    all_taz_articles.extend(articles)
                 await asyncio.sleep(3)
 
-            logger.info("taz.de: %d Treffer gesamt", len(all_taz_results))
+            logger.info("taz.de: %d Artikel gesamt", len(all_taz_articles))
 
             print(f"\n{'='*70}")
-            print(f"taz.de — {len(all_taz_results)} Treffer im Zeitraum")
+            print(f"taz.de — {len(all_taz_articles)} Artikel")
             print(f"{'='*70}")
-            for r in all_taz_results:
-                print(f"  {r.date}  {r.title}")
-                print(f"           {r.url}")
+            for a in all_taz_articles:
+                print(f"  {a.date}  {a.title}")
+                print(f"           Autor: {a.author or '(kein Autor)'}")
+                print(f"           {a.char_count} Zeichen | Suche: {a.search_terms}")
+                print(f"           {a.url}")
 
         finally:
             await browser.close()

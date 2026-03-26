@@ -14,7 +14,7 @@
 |----|-------------|--------|--------|-------------|
 | AP1 | Projektstruktur & Setup | ✅ | `main` | flake.nix, seed.yaml, config.py |
 | AP2a | taz.de Suche | ✅ | `feature/ap2a-taz-search` | Suchfunktion, Pagination, Datumsfilter, 24 Tests grün |
-| AP2b | taz.de Artikeldetails | ⏳ | — | Autor, Volltext, Character Count |
+| AP2b | taz.de Artikeldetails | ✅ | `feature/ap2b-taz-scrape` | Autor, Bodytext, Character Count, 31 Tests grün |
 | AP3a | heise.de Suche | ⏳ | — | |
 | AP3b | heise.de Artikeldetails | ⏳ | — | |
 | AP3c | heise.de Paywall-Handling | ⏳ | — | 4-Stufen-Strategie |
@@ -39,3 +39,4 @@ AP1 → AP2a → AP2b ───────────────────�
 |-------|----|----------|
 | 2026-03-26 | AP1 | Setup abgeschlossen, auf main committed |
 | 2026-03-26 | AP2a | taz.de Suche implementiert (search.py, models.py, 17 Tests) |
+| 2026-03-26 | AP2b | taz.de Artikeldetails implementiert (scrape.py, TazArticle, 7 Tests) |

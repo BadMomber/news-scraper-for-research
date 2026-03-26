@@ -7,3 +7,13 @@ class TazSearchResult:
     title: str
     url: str
     date: date
+
+
+@dataclass
+class TazArticle:
+    date: date
+    url: str
+    title: str
+    author: str
+    char_count: int
+    search_terms: str
