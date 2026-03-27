@@ -22,12 +22,12 @@
 - [x] Datenstruktur mit allen Feldern zusammenführen
 - [x] Test mit Artikeln aus AP2a
 
-## AP3a: heise.de Suche
-- [ ] Suchfunktion von heise.de analysieren (URL-Schema, Parameter)
-- [ ] Suchergebnisse parsen (Artikeltitel, Link, Datum)
-- [ ] Pagination behandeln (alle Ergebnisseiten durchlaufen)
-- [ ] Datumsfilter im Code anwenden (08.07.2025 – 08.02.2026)
-- [ ] Test mit 2–3 Keyword-Paaren
+## AP3a: heise.de Suche ✅
+- [x] Suchfunktion von heise.de analysieren (URL-Schema, Parameter)
+- [x] Suchergebnisse parsen (Artikeltitel, Link, Datum)
+- [x] Pagination behandeln (alle Ergebnisseiten durchlaufen)
+- [x] Datumsfilter im Code anwenden (08.07.2025 – 08.02.2026)
+- [x] Test mit 2–3 Keyword-Paaren
 
 ## AP3b: heise.de Artikeldetails
 - [ ] Artikel-Detailseite scrapen: Autor extrahieren
