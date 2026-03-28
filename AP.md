@@ -29,12 +29,12 @@
 - [x] Datumsfilter im Code anwenden (08.07.2025 – 08.02.2026)
 - [x] Test mit 2–3 Keyword-Paaren
 
-## AP3b: heise.de Artikeldetails
-- [ ] Artikel-Detailseite scrapen: Autor extrahieren
-- [ ] Artikeltext extrahieren (reiner Inhalt)
-- [ ] heise+ Artikel erkennen und markieren
-- [ ] Bei heise+ Artikeln: Teaser-Text übernehmen, reduzierter Character Count
-- [ ] Test mit frei zugänglichen und heise+ Artikeln
+## AP3b: heise.de Artikeldetails ✅
+- [x] Artikel-Detailseite scrapen: Autor extrahieren
+- [x] Artikeltext extrahieren (reiner Inhalt)
+- [x] heise+ Artikel erkennen und markieren
+- [x] Bei heise+ Artikeln: Teaser-Text übernehmen, reduzierter Character Count
+- [x] Test mit frei zugänglichen und heise+ Artikeln
 
 ## AP3c: heise.de Paywall-Handling
 - [ ] Stufe 1: Google-Referer

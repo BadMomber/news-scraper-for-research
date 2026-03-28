@@ -4,6 +4,7 @@ import logging
 from playwright.async_api import async_playwright
 
 from src.config import load_config
+from src.heise import scrape_articles as heise_scrape
 from src.heise import search as heise_search
 from src.taz import scrape_articles as taz_scrape
 from src.taz import search as taz_search
@@ -47,24 +48,28 @@ async def run():
                 print(f"           {a.url}")
 
             # --- heise.de ---
-            all_heise_results = []
+            all_heise_articles = []
             for pair in pairs:
                 results = await heise_search(
                     browser, pair, config.date_start, config.date_end,
                 )
-                all_heise_results.extend(results)
+                if results:
+                    articles = await heise_scrape(browser, results, pair)
+                    all_heise_articles.extend(articles)
                 await asyncio.sleep(3)
 
-            logger.info("heise.de: %d Treffer gesamt", len(all_heise_results))
+            logger.info("heise.de: %d Artikel gesamt", len(all_heise_articles))
 
-            plus_count = sum(1 for r in all_heise_results if r.is_heise_plus)
+            plus_count = sum(1 for a in all_heise_articles if a.is_heise_plus)
             print(f"\n{'='*70}")
-            print(f"heise.de — {len(all_heise_results)} Treffer ({plus_count} heise+)")
+            print(f"heise.de — {len(all_heise_articles)} Artikel ({plus_count} heise+)")
             print(f"{'='*70}")
-            for r in all_heise_results:
-                plus = " [heise+]" if r.is_heise_plus else ""
-                print(f"  {r.date}  {r.title}{plus}")
-                print(f"           {r.url}")
+            for a in all_heise_articles:
+                plus = " [heise+]" if a.is_heise_plus else ""
+                print(f"  {a.date}  {a.title}{plus}")
+                print(f"           Autor: {a.author or '(kein Autor)'}")
+                print(f"           {a.char_count} Zeichen | Suche: {a.search_terms}")
+                print(f"           {a.url}")
 
         finally:
             await browser.close()
