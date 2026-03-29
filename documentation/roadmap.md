@@ -20,7 +20,7 @@
 | AP3c | heise.de Paywall-Handling | ⚠️ | `feature/ap3c-heise-paywall` | Nicht automatisierbar — serverseitige Paywall, Teaser-Fallback bleibt |
 | AP4a | zeit.de Suche | ✅ | `feature/ap4a-zeit-search` | Suche, Pagination, Z+ Erkennung, frühes Abbruchkriterium, 68 Tests grün |
 | AP4b | zeit.de Artikeldetails | ✅ | `feature/ap4b-zeit-scrape` | Autor (title-attr), Bodytext, Z+ Teaser, frischer Kontext, 75 Tests grün |
-| AP4c | zeit.de Paywall-Handling | ⏳ | — | 4-Stufen-Strategie |
+| AP4c | zeit.de Paywall-Handling | ⚠️ | `feature/ap4c-zeit-paywall` | Nicht automatisierbar — serverseitige Paywall, Teaser-Fallback bleibt |
 | AP5 | Deduplizierung & CSV-Export | ✅ | `feature/ap5-dedup-csv` | Article dataclass, Dedup, CSV UTF-8, Paywall-Spalte, 92 Tests grün |
 | AP6 | Verifikation | ⏳ | — | |
 | AP7 | Gesamtlauf & Feinschliff | ⏳ | — | |
