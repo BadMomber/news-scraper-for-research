@@ -51,13 +51,13 @@
 - [x] Datumsfilter im Code anwenden (08.07.2025 – 08.02.2026)
 - [x] Test mit 2–3 Keyword-Paaren
 
-## AP4b: zeit.de Artikeldetails
-- [ ] Artikel-Detailseite scrapen: Autor extrahieren
-- [ ] Artikeltext extrahieren (reiner Inhalt)
-- [ ] Z+ Artikel erkennen und markieren
-- [ ] Bei Z+ Artikeln: Teaser-Text übernehmen, reduzierter Character Count
-- [ ] Metered Paywall: Cookies zwischen Requests nicht persistieren
-- [ ] Test mit frei zugänglichen und Z+ Artikeln
+## AP4b: zeit.de Artikeldetails ✅
+- [x] Artikel-Detailseite scrapen: Autor extrahieren
+- [x] Artikeltext extrahieren (reiner Inhalt)
+- [x] Z+ Artikel erkennen und markieren
+- [x] Bei Z+ Artikeln: Teaser-Text übernehmen, reduzierter Character Count
+- [x] Metered Paywall: Cookies zwischen Requests nicht persistieren
+- [x] Test mit frei zugänglichen und Z+ Artikeln
 
 ## AP4c: zeit.de Paywall-Handling
 - [ ] Stufe 1: Google-Referer

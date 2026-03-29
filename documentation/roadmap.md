@@ -19,7 +19,7 @@
 | AP3b | heise.de Artikeldetails | ✅ | `feature/ap3b-heise-scrape` | Autor, Bodytext, heise+ Teaser, 56 Tests grün |
 | AP3c | heise.de Paywall-Handling | ⏳ | — | 4-Stufen-Strategie |
 | AP4a | zeit.de Suche | ✅ | `feature/ap4a-zeit-search` | Suche, Pagination, Z+ Erkennung, frühes Abbruchkriterium, 68 Tests grün |
-| AP4b | zeit.de Artikeldetails | ⏳ | — | |
+| AP4b | zeit.de Artikeldetails | ✅ | `feature/ap4b-zeit-scrape` | Autor (title-attr), Bodytext, Z+ Teaser, frischer Kontext, 75 Tests grün |
 | AP4c | zeit.de Paywall-Handling | ⏳ | — | 4-Stufen-Strategie |
 | AP5 | Deduplizierung & CSV-Export | ⏳ | — | |
 | AP6 | Verifikation | ⏳ | — | |
@@ -43,3 +43,4 @@ AP1 → AP2a → AP2b ───────────────────�
 | 2026-03-27 | AP3a | heise.de Suche implementiert (search.py, HeiseSearchResult, 18 Tests) |
 | 2026-03-28 | AP3b | heise.de Artikeldetails implementiert (scrape.py, HeiseArticle, 7 Tests) |
 | 2026-03-29 | AP4a | zeit.de Suche implementiert (search.py, ZeitSearchResult, 12 Tests) |
+| 2026-03-29 | AP4b | zeit.de Artikeldetails implementiert (scrape.py, ZeitArticle, 7 Tests) |

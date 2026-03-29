@@ -8,3 +8,14 @@ class ZeitSearchResult:
     url: str
     date: date
     is_zplus: bool
+
+
+@dataclass
+class ZeitArticle:
+    date: date
+    url: str
+    title: str
+    author: str
+    char_count: int
+    search_terms: str
+    is_zplus: bool
