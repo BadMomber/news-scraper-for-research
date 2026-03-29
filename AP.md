@@ -36,13 +36,13 @@
 - [x] Bei heise+ Artikeln: Teaser-Text übernehmen, reduzierter Character Count
 - [x] Test mit frei zugänglichen und heise+ Artikeln
 
-## AP3c: heise.de Paywall-Handling
-- [ ] Stufe 1: Google-Referer
-- [ ] Stufe 2: Request ohne JavaScript (HTML prüfen)
-- [ ] Stufe 3: Google-Cache
-- [ ] Stufe 4: Archive-Dienste (archive.org)
-- [ ] Bei Erfolg: Teaser durch Volltext ersetzen, Character Count aktualisieren
-- [ ] Bei Misserfolg: Teaser und Markierung beibehalten
+## AP3c: heise.de Paywall-Handling ⚠️ (nicht automatisierbar)
+- [x] Stufe 1: Google-Referer — getestet, nur Teaser
+- [x] Stufe 2: Request ohne JavaScript — getestet, Text nicht im HTML
+- [x] Stufe 3: Google-Cache — getestet, nicht verfügbar
+- [x] Stufe 4: Archive-Dienste — archive.org nicht archiviert, archive.ph hat CAPTCHA
+- [x] Bei Misserfolg: Teaser und Markierung beibehalten ✅
+- Manueller Workaround: Nutzer holt Volltexte über archive.ph (CAPTCHA)
 
 ## AP4a: zeit.de Suche ✅
 - [x] Suchfunktion von zeit.de analysieren (URL-Schema, Parameter)
