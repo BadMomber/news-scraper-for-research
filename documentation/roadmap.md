@@ -17,7 +17,7 @@
 | AP2b | taz.de Artikeldetails | ✅ | `feature/ap2b-taz-scrape` | Autor, Bodytext, Character Count, 31 Tests grün |
 | AP3a | heise.de Suche | ✅ | `feature/ap3a-heise-search` | Suche, Pagination, heise+ Erkennung, frühes Abbruchkriterium, 49 Tests grün |
 | AP3b | heise.de Artikeldetails | ✅ | `feature/ap3b-heise-scrape` | Autor, Bodytext, heise+ Teaser, 56 Tests grün |
-| AP3c | heise.de Paywall-Handling | ⏳ | — | 4-Stufen-Strategie |
+| AP3c | heise.de Paywall-Handling | ⚠️ | `feature/ap3c-heise-paywall` | Nicht automatisierbar — serverseitige Paywall, Teaser-Fallback bleibt |
 | AP4a | zeit.de Suche | ✅ | `feature/ap4a-zeit-search` | Suche, Pagination, Z+ Erkennung, frühes Abbruchkriterium, 68 Tests grün |
 | AP4b | zeit.de Artikeldetails | ✅ | `feature/ap4b-zeit-scrape` | Autor (title-attr), Bodytext, Z+ Teaser, frischer Kontext, 75 Tests grün |
 | AP4c | zeit.de Paywall-Handling | ⏳ | — | 4-Stufen-Strategie |
