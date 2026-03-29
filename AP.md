@@ -73,10 +73,10 @@
 - [x] "Used Search Terms" bei Duplikaten zusammenführen (Semikolon-getrennt)
 - [x] CSV-Ausgabe schreiben (UTF-8, korrekte Spalten)
 
-## AP6: Verifikation
-- [ ] Link-Erreichbarkeit prüfen (HTTP-Statuscode)
-- [ ] Metadaten-Abgleich: Titel und Datum auf der Zielseite mit CSV-Daten vergleichen
-- [ ] Verifikationsbericht ausgeben (bestanden / fehlgeschlagen pro Artikel)
+## AP6: Verifikation ✅
+- [x] Link-Erreichbarkeit prüfen (HTTP-Statuscode)
+- [x] Metadaten-Abgleich: Titel und Datum auf der Zielseite mit CSV-Daten vergleichen
+- [x] Verifikationsbericht ausgeben (bestanden / fehlgeschlagen pro Artikel)
 
 ## AP7: Gesamtlauf & Feinschliff
 - [ ] Alle 17 Keyword-Paare × 3 Seiten = 51 Suchen durchführen
