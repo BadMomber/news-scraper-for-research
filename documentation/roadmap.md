@@ -21,7 +21,7 @@
 | AP4a | zeit.de Suche | ✅ | `feature/ap4a-zeit-search` | Suche, Pagination, Z+ Erkennung, frühes Abbruchkriterium, 68 Tests grün |
 | AP4b | zeit.de Artikeldetails | ✅ | `feature/ap4b-zeit-scrape` | Autor (title-attr), Bodytext, Z+ Teaser, frischer Kontext, 75 Tests grün |
 | AP4c | zeit.de Paywall-Handling | ⏳ | — | 4-Stufen-Strategie |
-| AP5 | Deduplizierung & CSV-Export | ⏳ | — | |
+| AP5 | Deduplizierung & CSV-Export | ✅ | `feature/ap5-dedup-csv` | Article dataclass, Dedup, CSV UTF-8, Paywall-Spalte, 92 Tests grün |
 | AP6 | Verifikation | ⏳ | — | |
 | AP7 | Gesamtlauf & Feinschliff | ⏳ | — | |
 
@@ -44,3 +44,4 @@ AP1 → AP2a → AP2b ───────────────────�
 | 2026-03-28 | AP3b | heise.de Artikeldetails implementiert (scrape.py, HeiseArticle, 7 Tests) |
 | 2026-03-29 | AP4a | zeit.de Suche implementiert (search.py, ZeitSearchResult, 12 Tests) |
 | 2026-03-29 | AP4b | zeit.de Artikeldetails implementiert (scrape.py, ZeitArticle, 7 Tests) |
+| 2026-03-29 | AP5 | Deduplizierung & CSV-Export (dedup.py, Article, 17 Tests) |
