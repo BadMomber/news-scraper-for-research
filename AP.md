@@ -59,13 +59,13 @@
 - [x] Metered Paywall: Cookies zwischen Requests nicht persistieren
 - [x] Test mit frei zugänglichen und Z+ Artikeln
 
-## AP4c: zeit.de Paywall-Handling
-- [ ] Stufe 1: Google-Referer
-- [ ] Stufe 2: Request ohne JavaScript (HTML prüfen)
-- [ ] Stufe 3: Google-Cache
-- [ ] Stufe 4: Archive-Dienste (archive.org)
-- [ ] Bei Erfolg: Teaser durch Volltext ersetzen, Character Count aktualisieren
-- [ ] Bei Misserfolg: Teaser und Markierung beibehalten
+## AP4c: zeit.de Paywall-Handling ⚠️ (nicht automatisierbar)
+- [x] Stufe 1: Google-Referer — getestet, identisch mit Baseline
+- [x] Stufe 2: JS disabled / Googlebot UA — getestet, identisch
+- [x] Stufe 3: Google-Cache — nicht getestet (bei heise+ bereits gescheitert)
+- [x] Stufe 4: Archive-Dienste — nicht getestet (CAPTCHA bei archive.ph)
+- [x] Bei Misserfolg: Teaser und Markierung beibehalten ✅
+- Metered Paywall wird durch frische Browser-Kontexte in AP4b umgangen
 
 ## AP5: Deduplizierung & CSV-Export ✅
 - [x] Alle Ergebnisse aus AP2–AP4 zusammenführen
