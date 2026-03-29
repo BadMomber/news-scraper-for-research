@@ -22,7 +22,7 @@
 | AP4b | zeit.de Artikeldetails | ✅ | `feature/ap4b-zeit-scrape` | Autor (title-attr), Bodytext, Z+ Teaser, frischer Kontext, 75 Tests grün |
 | AP4c | zeit.de Paywall-Handling | ⚠️ | `feature/ap4c-zeit-paywall` | Nicht automatisierbar — serverseitige Paywall, Teaser-Fallback bleibt |
 | AP5 | Deduplizierung & CSV-Export | ✅ | `feature/ap5-dedup-csv` | Article dataclass, Dedup, CSV UTF-8, Paywall-Spalte, 92 Tests grün |
-| AP6 | Verifikation | ⏳ | — | |
+| AP6 | Verifikation | ✅ | `feature/ap6-verification` | Link-Check, Titel/Datum-Abgleich, Bericht, 102 Tests grün |
 | AP7 | Gesamtlauf & Feinschliff | ⏳ | — | |
 
 ## Abhängigkeiten

@@ -9,6 +9,7 @@ from src.heise import scrape_articles as heise_scrape
 from src.heise import search as heise_search
 from src.taz import scrape_articles as taz_scrape
 from src.taz import search as taz_search
+from src.verify import print_report, verify_csv
 from src.zeit import scrape_articles as zeit_scrape
 from src.zeit import search as zeit_search
 
@@ -82,6 +83,15 @@ async def run():
     print(f"  Vor Dedup: {len(all_articles)} | Nach Dedup: {len(unique)}")
     print(f"  CSV: {csv_path}")
     print(f"{'='*70}")
+
+    # --- Verifikation ---
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=True)
+        try:
+            verification = await verify_csv(browser, csv_path)
+            print_report(verification)
+        finally:
+            await browser.close()
 
 
 def main():
