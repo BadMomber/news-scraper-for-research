@@ -17,59 +17,65 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(messag
 logger = logging.getLogger(__name__)
 
 
+async def _search_and_scrape(browser, site_name, search_fn, scrape_fn, pairs, config, search_offset):
+    """Search and scrape a single site for all keyword pairs."""
+    all_articles = []
+    total_searches = len(pairs) * 3  # 3 sites
+
+    for i, pair in enumerate(pairs):
+        search_num = search_offset + i + 1
+        query = "+".join(pair)
+        logger.info("Suche %d/%d: %s — %s", search_num, total_searches, site_name, query)
+
+        results = await search_fn(
+            browser, pair, config.date_start, config.date_end,
+        )
+        if results:
+            articles = await scrape_fn(browser, results, pair)
+            all_articles.extend(articles)
+            logger.info(
+                "Suche %d/%d: %s — %s — %d Treffer, %d Artikel gescrapt",
+                search_num, total_searches, site_name, query,
+                len(results), len(articles),
+            )
+        else:
+            logger.info(
+                "Suche %d/%d: %s — %s — 0 Treffer",
+                search_num, total_searches, site_name, query,
+            )
+        await asyncio.sleep(3)
+
+    logger.info("%s abgeschlossen: %d Artikel", site_name, len(all_articles))
+    return all_articles
+
+
 async def run():
     config = load_config()
     pairs = config.all_keyword_pairs
+    total = len(pairs) * 3
 
     logger.info(
-        "%d Keyword-Paare, %d Kategorien, Zeitraum %s – %s",
-        len(pairs), len(config.search_terms), config.date_start, config.date_end,
+        "%d Keyword-Paare × 3 Seiten = %d Suchen, Zeitraum %s – %s",
+        len(pairs), total, config.date_start, config.date_end,
     )
 
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
         try:
-            # --- taz.de ---
-            all_taz_articles = []
-            for pair in pairs:
-                results = await taz_search(
-                    browser, pair, config.date_start, config.date_end,
-                )
-                if results:
-                    articles = await taz_scrape(browser, results, pair)
-                    all_taz_articles.extend(articles)
-                await asyncio.sleep(3)
-            logger.info("taz.de: %d Artikel", len(all_taz_articles))
-
-            # --- heise.de ---
-            all_heise_articles = []
-            for pair in pairs:
-                results = await heise_search(
-                    browser, pair, config.date_start, config.date_end,
-                )
-                if results:
-                    articles = await heise_scrape(browser, results, pair)
-                    all_heise_articles.extend(articles)
-                await asyncio.sleep(3)
-            logger.info("heise.de: %d Artikel", len(all_heise_articles))
-
-            # --- zeit.de ---
-            all_zeit_articles = []
-            for pair in pairs:
-                results = await zeit_search(
-                    browser, pair, config.date_start, config.date_end,
-                )
-                if results:
-                    articles = await zeit_scrape(browser, results, pair)
-                    all_zeit_articles.extend(articles)
-                await asyncio.sleep(3)
-            logger.info("zeit.de: %d Artikel", len(all_zeit_articles))
-
+            taz_articles = await _search_and_scrape(
+                browser, "taz.de", taz_search, taz_scrape, pairs, config, 0,
+            )
+            heise_articles = await _search_and_scrape(
+                browser, "heise.de", heise_search, heise_scrape, pairs, config, len(pairs),
+            )
+            zeit_articles = await _search_and_scrape(
+                browser, "zeit.de", zeit_search, zeit_scrape, pairs, config, len(pairs) * 2,
+            )
         finally:
             await browser.close()
 
     # --- Deduplizierung & CSV-Export ---
-    all_articles = to_articles(all_taz_articles, all_heise_articles, all_zeit_articles)
+    all_articles = to_articles(taz_articles, heise_articles, zeit_articles)
     unique = deduplicate(all_articles)
     csv_path = export_csv(unique)
 
@@ -77,9 +83,9 @@ async def run():
     paywall_count = sum(1 for a in unique if a.paywall)
     print(f"\n{'='*70}")
     print(f"Ergebnis: {len(unique)} eindeutige Artikel ({paywall_count} mit Paywall)")
-    print(f"  taz.de:   {len(all_taz_articles)} Artikel")
-    print(f"  heise.de: {len(all_heise_articles)} Artikel")
-    print(f"  zeit.de:  {len(all_zeit_articles)} Artikel")
+    print(f"  taz.de:   {len(taz_articles)} Artikel")
+    print(f"  heise.de: {len(heise_articles)} Artikel")
+    print(f"  zeit.de:  {len(zeit_articles)} Artikel")
     print(f"  Vor Dedup: {len(all_articles)} | Nach Dedup: {len(unique)}")
     print(f"  CSV: {csv_path}")
     print(f"{'='*70}")

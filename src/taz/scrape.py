@@ -90,7 +90,24 @@ async def _extract_author(page: Page) -> str:
             seen.add(name)
             authors.append(name)
 
-    return ", ".join(authors)
+    if authors:
+        return ", ".join(authors)
+
+    # Fallback: extract agency prefix from body text (e.g. "dpa | ..." or "ap | ...")
+    return await _extract_agency_author(page)
+
+
+async def _extract_agency_author(page: Page) -> str:
+    """Extract news agency name from body text prefix like 'dpa | ...'."""
+    first_p = await page.query_selector("article p.bodytext")
+    if first_p is None:
+        return ""
+    text = (await first_p.inner_text()).strip()
+    if " | " in text:
+        agency = text.split(" | ", 1)[0].strip()
+        if len(agency) <= 10:  # Agency names are short (dpa, ap, afp, rtr)
+            return agency
+    return ""
 
 
 async def _extract_body_text(page: Page) -> str:

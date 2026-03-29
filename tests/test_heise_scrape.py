@@ -86,6 +86,16 @@ class TestExtractBodyText:
 
         assert len(text) > 100
 
+    def test_heise_plus_no_paragraphs_fallback_meta(self, page, event_loop):
+        """heise+ articles with no visible paragraphs use meta description."""
+        url = (FIXTURES / "heise_article_plus_empty.html").as_uri()
+        run(page.goto(url), event_loop)
+        text = run(_extract_body_text(page), event_loop)
+
+        assert "Sprachmodelle" in text
+        assert "Reasoning" in text
+        assert len(text) > 0
+
     def test_empty_article(self, page, event_loop):
         url = (FIXTURES / "heise_search_empty.html").as_uri()
         run(page.goto(url), event_loop)
