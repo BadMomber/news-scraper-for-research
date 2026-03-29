@@ -8,6 +8,7 @@ from src.heise import scrape_articles as heise_scrape
 from src.heise import search as heise_search
 from src.taz import scrape_articles as taz_scrape
 from src.taz import search as taz_search
+from src.zeit import search as zeit_search
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -70,6 +71,26 @@ async def run():
                 print(f"           Autor: {a.author or '(kein Autor)'}")
                 print(f"           {a.char_count} Zeichen | Suche: {a.search_terms}")
                 print(f"           {a.url}")
+
+            # --- zeit.de ---
+            all_zeit_results = []
+            for pair in pairs:
+                results = await zeit_search(
+                    browser, pair, config.date_start, config.date_end,
+                )
+                all_zeit_results.extend(results)
+                await asyncio.sleep(3)
+
+            logger.info("zeit.de: %d Treffer gesamt", len(all_zeit_results))
+
+            zplus_count = sum(1 for r in all_zeit_results if r.is_zplus)
+            print(f"\n{'='*70}")
+            print(f"zeit.de — {len(all_zeit_results)} Treffer ({zplus_count} Z+)")
+            print(f"{'='*70}")
+            for r in all_zeit_results:
+                zplus = " [Z+]" if r.is_zplus else ""
+                print(f"  {r.date}  {r.title[:70]}{zplus}")
+                print(f"           {r.url}")
 
         finally:
             await browser.close()
