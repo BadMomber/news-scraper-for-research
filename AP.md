@@ -67,11 +67,11 @@
 - [ ] Bei Erfolg: Teaser durch Volltext ersetzen, Character Count aktualisieren
 - [ ] Bei Misserfolg: Teaser und Markierung beibehalten
 
-## AP5: Deduplizierung & CSV-Export
-- [ ] Alle Ergebnisse aus AP2–AP4 zusammenführen
-- [ ] Deduplizierung über Artikeltitel implementieren
-- [ ] "Used Search Terms" bei Duplikaten zusammenführen (Semikolon-getrennt)
-- [ ] CSV-Ausgabe schreiben (UTF-8, korrekte Spalten)
+## AP5: Deduplizierung & CSV-Export ✅
+- [x] Alle Ergebnisse aus AP2–AP4 zusammenführen
+- [x] Deduplizierung über Artikeltitel implementieren
+- [x] "Used Search Terms" bei Duplikaten zusammenführen (Semikolon-getrennt)
+- [x] CSV-Ausgabe schreiben (UTF-8, korrekte Spalten)
 
 ## AP6: Verifikation
 - [ ] Link-Erreichbarkeit prüfen (HTTP-Statuscode)

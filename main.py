@@ -4,6 +4,7 @@ import logging
 from playwright.async_api import async_playwright
 
 from src.config import load_config
+from src.dedup import deduplicate, export_csv, to_articles
 from src.heise import scrape_articles as heise_scrape
 from src.heise import search as heise_search
 from src.taz import scrape_articles as taz_scrape
@@ -37,17 +38,7 @@ async def run():
                     articles = await taz_scrape(browser, results, pair)
                     all_taz_articles.extend(articles)
                 await asyncio.sleep(3)
-
-            logger.info("taz.de: %d Artikel gesamt", len(all_taz_articles))
-
-            print(f"\n{'='*70}")
-            print(f"taz.de — {len(all_taz_articles)} Artikel")
-            print(f"{'='*70}")
-            for a in all_taz_articles:
-                print(f"  {a.date}  {a.title}")
-                print(f"           Autor: {a.author or '(kein Autor)'}")
-                print(f"           {a.char_count} Zeichen | Suche: {a.search_terms}")
-                print(f"           {a.url}")
+            logger.info("taz.de: %d Artikel", len(all_taz_articles))
 
             # --- heise.de ---
             all_heise_articles = []
@@ -59,19 +50,7 @@ async def run():
                     articles = await heise_scrape(browser, results, pair)
                     all_heise_articles.extend(articles)
                 await asyncio.sleep(3)
-
-            logger.info("heise.de: %d Artikel gesamt", len(all_heise_articles))
-
-            plus_count = sum(1 for a in all_heise_articles if a.is_heise_plus)
-            print(f"\n{'='*70}")
-            print(f"heise.de — {len(all_heise_articles)} Artikel ({plus_count} heise+)")
-            print(f"{'='*70}")
-            for a in all_heise_articles:
-                plus = " [heise+]" if a.is_heise_plus else ""
-                print(f"  {a.date}  {a.title}{plus}")
-                print(f"           Autor: {a.author or '(kein Autor)'}")
-                print(f"           {a.char_count} Zeichen | Suche: {a.search_terms}")
-                print(f"           {a.url}")
+            logger.info("heise.de: %d Artikel", len(all_heise_articles))
 
             # --- zeit.de ---
             all_zeit_articles = []
@@ -83,22 +62,26 @@ async def run():
                     articles = await zeit_scrape(browser, results, pair)
                     all_zeit_articles.extend(articles)
                 await asyncio.sleep(3)
-
-            logger.info("zeit.de: %d Artikel gesamt", len(all_zeit_articles))
-
-            zplus_count = sum(1 for a in all_zeit_articles if a.is_zplus)
-            print(f"\n{'='*70}")
-            print(f"zeit.de — {len(all_zeit_articles)} Artikel ({zplus_count} Z+)")
-            print(f"{'='*70}")
-            for a in all_zeit_articles:
-                zplus = " [Z+]" if a.is_zplus else ""
-                print(f"  {a.date}  {a.title[:70]}{zplus}")
-                print(f"           Autor: {a.author or '(kein Autor)'}")
-                print(f"           {a.char_count} Zeichen | Suche: {a.search_terms}")
-                print(f"           {a.url}")
+            logger.info("zeit.de: %d Artikel", len(all_zeit_articles))
 
         finally:
             await browser.close()
+
+    # --- Deduplizierung & CSV-Export ---
+    all_articles = to_articles(all_taz_articles, all_heise_articles, all_zeit_articles)
+    unique = deduplicate(all_articles)
+    csv_path = export_csv(unique)
+
+    # Summary
+    paywall_count = sum(1 for a in unique if a.paywall)
+    print(f"\n{'='*70}")
+    print(f"Ergebnis: {len(unique)} eindeutige Artikel ({paywall_count} mit Paywall)")
+    print(f"  taz.de:   {len(all_taz_articles)} Artikel")
+    print(f"  heise.de: {len(all_heise_articles)} Artikel")
+    print(f"  zeit.de:  {len(all_zeit_articles)} Artikel")
+    print(f"  Vor Dedup: {len(all_articles)} | Nach Dedup: {len(unique)}")
+    print(f"  CSV: {csv_path}")
+    print(f"{'='*70}")
 
 
 def main():
