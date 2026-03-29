@@ -45,12 +45,13 @@ class TestExtractAuthor:
 
         assert author == "Johannes Drosdowski"
 
-    def test_no_author_agency(self, page, event_loop):
+    def test_agency_author_from_bodytext(self, page, event_loop):
+        """Agency articles have no named author but 'ap | ...' in body text."""
         url = (FIXTURES / "taz_article_agency.html").as_uri()
         run(page.goto(url), event_loop)
         author = run(_extract_author(page), event_loop)
 
-        assert author == ""
+        assert author == "ap"
 
     def test_multiple_authors(self, page, event_loop):
         url = (FIXTURES / "taz_article_multi_author.html").as_uri()

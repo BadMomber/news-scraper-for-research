@@ -78,11 +78,13 @@
 - [x] Metadaten-Abgleich: Titel und Datum auf der Zielseite mit CSV-Daten vergleichen
 - [x] Verifikationsbericht ausgeben (bestanden / fehlgeschlagen pro Artikel)
 
-## AP7: Gesamtlauf & Feinschliff
-- [ ] Alle 17 Keyword-Paare × 3 Seiten = 51 Suchen durchführen
-- [ ] Logging: Fortschritt und Fehler nachvollziehbar ausgeben
-- [ ] Robustheit: Fehlerbehandlung bei Timeouts, 429er, Netzwerkfehlern
-- [ ] Finale CSV prüfen und ggf. Korrekturen
+## AP7: Gesamtlauf & Feinschliff ✅
+- [x] Alle 17 Keyword-Paare × 3 Seiten = 51 Suchen durchführen
+- [x] Logging: Fortschritt und Fehler nachvollziehbar ausgeben ("Suche 12/51: heise.de — Grok+xAI")
+- [x] Robustheit: Fehlerbehandlung bei Timeouts, 429er, Netzwerkfehlern
+- [x] Finale CSV prüfen und ggf. Korrekturen
+- [x] Fix: taz.de Agentur-Autoren aus Bodytext extrahieren ("dpa |" → Autor "dpa")
+- [x] Fix: heise+ Artikel mit 0 Zeichen → Fallback auf meta description
 
 ## Reihenfolge & Abhängigkeiten
 

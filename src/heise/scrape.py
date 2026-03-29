@@ -114,7 +114,9 @@ async def _extract_body_text(page: Page) -> str:
     """Extract article body text from heise.de page.
 
     Uses all <p> elements within <article>. For heise+ articles,
-    this returns only the visible teaser text.
+    this returns only the visible teaser text. If no text is found
+    (some heise+ articles have no visible paragraphs), falls back
+    to the meta description.
     """
     paragraphs = await page.query_selector_all("article p")
 
@@ -125,4 +127,14 @@ async def _extract_body_text(page: Page) -> str:
         if stripped:
             texts.append(stripped)
 
-    return "\n".join(texts)
+    if texts:
+        return "\n".join(texts)
+
+    # Fallback for heise+ articles with no visible paragraphs
+    meta = await page.query_selector("meta[name='description']")
+    if meta:
+        content = await meta.get_attribute("content")
+        if content and content.strip():
+            return content.strip()
+
+    return ""
