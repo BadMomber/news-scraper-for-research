@@ -1,7 +1,9 @@
 from datetime import date
 from pathlib import Path
 
-from src.config import load_config
+import yaml
+
+from src.config import SiteCredentials, load_config
 
 
 SEED_PATH = Path(__file__).parent.parent / "seed.yaml"
@@ -51,3 +53,43 @@ def test_keyword_pairs_contain_umlauts():
     config = load_config(SEED_PATH)
     pairs_flat = [term for pair in config.all_keyword_pairs for term in pair]
     assert "Künstliche Intelligenz" in pairs_flat
+
+
+def test_load_config_reads_credentials():
+    config = load_config(SEED_PATH)
+    assert "zeit" in config.credentials
+    assert isinstance(config.credentials["zeit"], SiteCredentials)
+    assert config.credentials["zeit"].username != ""
+    assert config.credentials["zeit"].password != ""
+
+
+def test_load_config_without_credentials(tmp_path):
+    seed = {
+        "search_terms": {"cat": [["a", "b"]]},
+        "target_sites": ["https://example.com"],
+        "date_range": {"start": "2025-01-01", "end": "2025-12-31"},
+    }
+    path = tmp_path / "seed.yaml"
+    path.write_text(yaml.dump(seed), encoding="utf-8")
+
+    config = load_config(path)
+
+    assert config.credentials == {}
+
+
+def test_load_config_partial_credentials(tmp_path):
+    seed = {
+        "search_terms": {"cat": [["a", "b"]]},
+        "target_sites": ["https://example.com"],
+        "date_range": {"start": "2025-01-01", "end": "2025-12-31"},
+        "credentials": {
+            "zeit": {"username": "user", "password": "pass"},
+        },
+    }
+    path = tmp_path / "seed.yaml"
+    path.write_text(yaml.dump(seed), encoding="utf-8")
+
+    config = load_config(path)
+
+    assert "zeit" in config.credentials
+    assert "heise" not in config.credentials

@@ -1,32 +1,69 @@
 import asyncio
 import logging
 
-from playwright.async_api import Browser, Page
+from playwright.async_api import Browser, BrowserContext, Page
 
 from .models import ZeitArticle, ZeitSearchResult
 from .search import _dismiss_cookie_banner, RATE_LIMIT_SECONDS, MAX_RETRIES, BACKOFF_SECONDS
 
 logger = logging.getLogger(__name__)
 
+LOGIN_URL = "https://meine.zeit.de/anmelden"
 
-async def scrape_articles(
-    browser: Browser,
+
+async def _login(page: Page, username: str, password: str) -> bool:
+    """Log in to zeit.de and return True on success."""
+    try:
+        await page.goto(LOGIN_URL, wait_until="domcontentloaded", timeout=30000)
+        await _dismiss_cookie_banner(page)
+
+        # Keycloak login form at login.zeit.de
+        await page.fill("#username", username)
+        await page.fill("#password", password)
+
+        # FriendlyCaptcha runs a proof-of-work that enables the submit button.
+        # Playwright's click auto-waits for enabled state; allow up to 60s.
+        await page.click("input[name='login']", timeout=60000)
+
+        # Wait for redirect after login
+        await page.wait_for_load_state("domcontentloaded", timeout=15000)
+
+        # Check for success: redirect away from login page
+        if "login.zeit.de" not in page.url:
+            logger.info("zeit.de Login erfolgreich")
+            return True
+
+        # Alternative: check for logged-in indicator
+        logout_link = await page.query_selector("a[href*='abmelden'], a[href*='logout']")
+        if logout_link:
+            logger.info("zeit.de Login erfolgreich")
+            return True
+
+        logger.warning("zeit.de Login fehlgeschlagen — weiter ohne Login")
+        return False
+
+    except Exception as e:
+        logger.warning("zeit.de Login fehlgeschlagen: %s — weiter ohne Login", e)
+        return False
+
+
+async def _scrape_with_context(
+    context: BrowserContext,
     results: list[ZeitSearchResult],
-    keyword_pair: list[str],
+    search_terms: str,
+    close_context_per_article: bool,
+    browser: Browser,
 ) -> list[ZeitArticle]:
-    """Scrape article details for each zeit.de search result.
-
-    Each article is opened in a fresh browser context to avoid
-    triggering the metered paywall (no cookies from previous visits).
-    """
-    search_terms = "+".join(keyword_pair)
+    """Scrape articles using the given context strategy."""
     articles: list[ZeitArticle] = []
 
     for i, result in enumerate(results):
         logger.info("Scrape %d/%d: %s", i + 1, len(results), result.url)
 
-        # Fresh context per article to avoid metered paywall
-        context = await browser.new_context()
+        if close_context_per_article:
+            # Fresh context per article (no-login mode)
+            context = await browser.new_context()
+
         page = await context.new_page()
 
         try:
@@ -50,12 +87,59 @@ async def scrape_articles(
                 char_count=char_count,
                 search_terms=search_terms,
                 is_zplus=result.is_zplus,
+                body_text=body_text,
             ))
         finally:
-            await context.close()
+            await page.close()
+            if close_context_per_article:
+                await context.close()
 
         if i < len(results) - 1:
             await asyncio.sleep(RATE_LIMIT_SECONDS)
+
+    return articles
+
+
+async def create_logged_in_context(browser: Browser, username: str, password: str) -> BrowserContext | None:
+    """Create a browser context logged in to zeit.de.
+
+    Returns the logged-in context, or None if login fails.
+    """
+    context = await browser.new_context()
+    page = await context.new_page()
+    success = await _login(page, username, password)
+    await page.close()
+
+    if success:
+        return context
+
+    await context.close()
+    return None
+
+
+async def scrape_articles(
+    browser: Browser,
+    results: list[ZeitSearchResult],
+    keyword_pair: list[str],
+    logged_in_context: BrowserContext | None = None,
+) -> list[ZeitArticle]:
+    """Scrape article details for each zeit.de search result.
+
+    With logged_in_context: reuse that context for all articles (Z+ full text).
+    Without: fresh context per article to avoid metered paywall.
+    """
+    search_terms = "+".join(keyword_pair)
+
+    if logged_in_context is not None:
+        articles = await _scrape_with_context(
+            logged_in_context, results, search_terms,
+            close_context_per_article=False, browser=browser,
+        )
+    else:
+        articles = await _scrape_with_context(
+            await browser.new_context(), results, search_terms,
+            close_context_per_article=True, browser=browser,
+        )
 
     logger.info(
         "Scrape '%s': %d/%d Artikel erfolgreich",
@@ -112,18 +196,24 @@ async def _extract_author(page: Page) -> str:
 
 
 async def _extract_body_text(page: Page) -> str:
-    """Extract article body text from zeit.de page.
+    """Extract article body text with Markdown-style headings from zeit.de.
 
-    Uses all <p> elements within <article>. For Z+ articles,
+    Uses <p> and <h2>/<h3> elements within <article>. For Z+ articles,
     this returns only the visible teaser text.
     """
-    paragraphs = await page.query_selector_all("article p")
+    elements = await page.query_selector_all("article p, article h2, article h3")
 
     texts = []
-    for p in paragraphs:
-        text = await p.inner_text()
-        stripped = text.strip()
-        if stripped:
-            texts.append(stripped)
+    for el in elements:
+        tag = await el.evaluate("el => el.tagName")
+        text = (await el.inner_text()).strip()
+        if not text:
+            continue
+        if tag == "H2":
+            texts.append(f"\n## {text}")
+        elif tag == "H3":
+            texts.append(f"\n### {text}")
+        else:
+            texts.append(text)
 
-    return "\n".join(texts)
+    return "\n".join(texts).strip()

@@ -1,8 +1,14 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
 import yaml
+
+
+@dataclass
+class SiteCredentials:
+    username: str
+    password: str
 
 
 @dataclass
@@ -11,6 +17,7 @@ class SearchConfig:
     target_sites: list[str]
     date_start: date
     date_end: date
+    credentials: dict[str, SiteCredentials] = field(default_factory=dict)
 
     @property
     def all_keyword_pairs(self) -> list[list[str]]:
@@ -29,9 +36,17 @@ def load_config(path: Path | None = None) -> SearchConfig:
     with open(path, encoding="utf-8") as f:
         raw = yaml.safe_load(f)
 
+    credentials: dict[str, SiteCredentials] = {}
+    for site, creds in raw.get("credentials", {}).items():
+        credentials[site] = SiteCredentials(
+            username=creds["username"],
+            password=creds["password"],
+        )
+
     return SearchConfig(
         search_terms=raw["search_terms"],
         target_sites=raw["target_sites"],
         date_start=date.fromisoformat(raw["date_range"]["start"]),
         date_end=date.fromisoformat(raw["date_range"]["end"]),
+        credentials=credentials,
     )

@@ -17,3 +17,4 @@ class TazArticle:
     author: str
     char_count: int
     search_terms: str
+    body_text: str = ""
