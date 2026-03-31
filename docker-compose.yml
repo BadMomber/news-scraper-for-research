@@ -1,0 +1,7 @@
+services:
+  crawler:
+    build: .
+    volumes:
+      - ./seed.yaml:/app/seed.yaml:ro
+      - ./ergebnisse.csv:/app/ergebnisse.csv
+      - ./texte:/app/texte
