@@ -48,6 +48,7 @@ async def scrape_articles(
                 char_count=char_count,
                 search_terms=search_terms,
                 is_heise_plus=result.is_heise_plus,
+                body_text=body_text,
             ))
 
             if i < len(results) - 1:
@@ -113,7 +114,8 @@ async def _extract_author(page: Page) -> str:
 async def _extract_body_text(page: Page) -> str:
     """Extract article body text from heise.de page.
 
-    Uses all <p> elements within <article>. For heise+ articles,
+    Uses all <p> elements within <article>. heise.de does not use
+    subheadings within article body text. For heise+ articles,
     this returns only the visible teaser text. If no text is found
     (some heise+ articles have no visible paragraphs), falls back
     to the meta description.

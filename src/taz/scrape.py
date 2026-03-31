@@ -44,6 +44,7 @@ async def scrape_articles(
                 author=author,
                 char_count=char_count,
                 search_terms=search_terms,
+                body_text=body_text,
             ))
 
             if i < len(results) - 1:
@@ -111,25 +112,31 @@ async def _extract_agency_author(page: Page) -> str:
 
 
 async def _extract_body_text(page: Page) -> str:
-    """Extract article body text from the page.
+    """Extract article body text with Markdown-style headings.
 
     taz.de structure:
         <article>
-          ...
-          <p class="bodytext paragraph typo-bodytext ...">Text</p>
+          <h2 class="typo-r-subhead ...">Subheading</h2>
           <p class="bodytext paragraph typo-bodytext ...">Text</p>
           ...
         </article>
 
+    Subheadings are prefixed with "## " in the output.
     Agency prefixes like "dpa | " or "ap | " remain in the text.
     """
-    paragraphs = await page.query_selector_all("article p.bodytext")
+    elements = await page.query_selector_all(
+        "article p.bodytext, article h2.typo-r-subhead"
+    )
 
     texts = []
-    for p in paragraphs:
-        text = await p.inner_text()
-        stripped = text.strip()
-        if stripped:
-            texts.append(stripped)
+    for el in elements:
+        tag = await el.evaluate("el => el.tagName")
+        text = (await el.inner_text()).strip()
+        if not text:
+            continue
+        if tag == "H2":
+            texts.append(f"\n## {text}")
+        else:
+            texts.append(text)
 
-    return "\n".join(texts)
+    return "\n".join(texts).strip()

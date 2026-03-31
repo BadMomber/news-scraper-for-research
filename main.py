@@ -1,11 +1,14 @@
 import asyncio
 import logging
+from pathlib import Path
 
 from playwright.async_api import async_playwright
 
 from src.config import load_config
-from src.dedup import deduplicate, export_csv, to_articles
+from src.dedup import Article, IncrementalWriter
+from src.fulltext_filter import filter_articles
 from src.heise import scrape_articles as heise_scrape
+from src.zeit.scrape import create_logged_in_context
 from src.heise import search as heise_search
 from src.taz import scrape_articles as taz_scrape
 from src.taz import search as taz_search
@@ -17,10 +20,14 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(messag
 logger = logging.getLogger(__name__)
 
 
-async def _search_and_scrape(browser, site_name, search_fn, scrape_fn, pairs, config, search_offset):
+async def _search_and_scrape(
+    browser, site_name, search_fn, scrape_fn, to_articles_fn,
+    pairs, config, search_offset, writer, scrape_kwargs=None,
+):
     """Search and scrape a single site for all keyword pairs."""
-    all_articles = []
+    site_count = 0
     total_searches = len(pairs) * 3  # 3 sites
+    extra = scrape_kwargs or {}
 
     for i, pair in enumerate(pairs):
         search_num = search_offset + i + 1
@@ -31,8 +38,10 @@ async def _search_and_scrape(browser, site_name, search_fn, scrape_fn, pairs, co
             browser, pair, config.date_start, config.date_end,
         )
         if results:
-            articles = await scrape_fn(browser, results, pair)
-            all_articles.extend(articles)
+            articles = await scrape_fn(browser, results, pair, **extra)
+            unified = to_articles_fn(articles)
+            writer.add_articles(unified)
+            site_count += len(articles)
             logger.info(
                 "Suche %d/%d: %s — %s — %d Treffer, %d Artikel gescrapt",
                 search_num, total_searches, site_name, query,
@@ -45,8 +54,43 @@ async def _search_and_scrape(browser, site_name, search_fn, scrape_fn, pairs, co
             )
         await asyncio.sleep(3)
 
-    logger.info("%s abgeschlossen: %d Artikel", site_name, len(all_articles))
-    return all_articles
+    logger.info("%s abgeschlossen: %d Artikel", site_name, site_count)
+    return site_count
+
+
+def _taz_to_articles(taz_articles) -> list[Article]:
+    return [
+        Article(
+            date=a.date, url=a.url, title=a.title, author=a.author,
+            char_count=a.char_count, search_terms=[a.search_terms],
+            paywall="", body_text=a.body_text,
+        )
+        for a in taz_articles
+    ]
+
+
+def _heise_to_articles(heise_articles) -> list[Article]:
+    return [
+        Article(
+            date=a.date, url=a.url, title=a.title, author=a.author,
+            char_count=a.char_count, search_terms=[a.search_terms],
+            paywall="heise+" if a.is_heise_plus else "",
+            body_text=a.body_text,
+        )
+        for a in heise_articles
+    ]
+
+
+def _zeit_to_articles(zeit_articles) -> list[Article]:
+    return [
+        Article(
+            date=a.date, url=a.url, title=a.title, author=a.author,
+            char_count=a.char_count, search_terms=[a.search_terms],
+            paywall="Z+" if a.is_zplus else "",
+            body_text=a.body_text,
+        )
+        for a in zeit_articles
+    ]
 
 
 async def run():
@@ -59,35 +103,51 @@ async def run():
         len(pairs), total, config.date_start, config.date_end,
     )
 
+    csv_path = Path("ergebnisse.csv")
+    texte_dir = Path("texte")
+    writer = IncrementalWriter(csv_path, texte_dir)
+
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
         try:
-            taz_articles = await _search_and_scrape(
-                browser, "taz.de", taz_search, taz_scrape, pairs, config, 0,
+            taz_count = await _search_and_scrape(
+                browser, "taz.de", taz_search, taz_scrape, _taz_to_articles,
+                pairs, config, 0, writer,
             )
-            heise_articles = await _search_and_scrape(
-                browser, "heise.de", heise_search, heise_scrape, pairs, config, len(pairs),
+            heise_count = await _search_and_scrape(
+                browser, "heise.de", heise_search, heise_scrape, _heise_to_articles,
+                pairs, config, len(pairs), writer,
             )
-            zeit_articles = await _search_and_scrape(
-                browser, "zeit.de", zeit_search, zeit_scrape, pairs, config, len(pairs) * 2,
+            # Login once for all zeit.de keyword pairs
+            zeit_creds = config.credentials.get("zeit")
+            zeit_context = None
+            if zeit_creds:
+                zeit_context = await create_logged_in_context(
+                    browser, zeit_creds.username, zeit_creds.password,
+                )
+            zeit_count = await _search_and_scrape(
+                browser, "zeit.de", zeit_search, zeit_scrape, _zeit_to_articles,
+                pairs, config, len(pairs) * 2, writer,
+                scrape_kwargs={"logged_in_context": zeit_context},
             )
+            if zeit_context:
+                await zeit_context.close()
         finally:
             await browser.close()
 
-    # --- Deduplizierung & CSV-Export ---
-    all_articles = to_articles(taz_articles, heise_articles, zeit_articles)
-    unique = deduplicate(all_articles)
-    csv_path = export_csv(unique)
+    # --- Volltextfilter ---
+    scrape_count = writer.article_count
+    filter_result = filter_articles(csv_path, texte_dir)
 
     # Summary
-    paywall_count = sum(1 for a in unique if a.paywall)
     print(f"\n{'='*70}")
-    print(f"Ergebnis: {len(unique)} eindeutige Artikel ({paywall_count} mit Paywall)")
-    print(f"  taz.de:   {len(taz_articles)} Artikel")
-    print(f"  heise.de: {len(heise_articles)} Artikel")
-    print(f"  zeit.de:  {len(zeit_articles)} Artikel")
-    print(f"  Vor Dedup: {len(all_articles)} | Nach Dedup: {len(unique)}")
+    print(f"Ergebnis: {filter_result.kept} Artikel (von {scrape_count} nach Volltextfilter)")
+    print(f"  taz.de:   {taz_count} Artikel")
+    print(f"  heise.de: {heise_count} Artikel")
+    print(f"  zeit.de:  {zeit_count} Artikel")
+    print(f"  Vor Filter: {scrape_count} | Nach Filter: {filter_result.kept} | Entfernt: {filter_result.removed}")
     print(f"  CSV: {csv_path}")
+    print(f"  Texte: {texte_dir}/")
     print(f"{'='*70}")
 
     # --- Verifikation ---

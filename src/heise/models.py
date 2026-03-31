@@ -19,3 +19,4 @@ class HeiseArticle:
     char_count: int
     search_terms: str
     is_heise_plus: bool
+    body_text: str = ""

@@ -19,3 +19,4 @@ class ZeitArticle:
     char_count: int
     search_terms: str
     is_zplus: bool
+    body_text: str = ""
