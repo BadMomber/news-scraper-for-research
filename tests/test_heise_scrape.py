@@ -71,6 +71,14 @@ class TestExtractBodyText:
         assert "Technologieministerin" in text
         assert "\n" in text
 
+    def test_subheadings_as_markdown(self, page, event_loop):
+        url = (FIXTURES / "heise_article.html").as_uri()
+        run(page.goto(url), event_loop)
+        text = run(_extract_body_text(page), event_loop)
+
+        assert "### Kritik an Maßnahmen" in text
+        assert "### Fazit" in text
+
     def test_heise_plus_teaser_only(self, page, event_loop):
         url = (FIXTURES / "heise_article_plus.html").as_uri()
         run(page.goto(url), event_loop)

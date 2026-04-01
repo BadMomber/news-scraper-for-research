@@ -112,25 +112,36 @@ async def _extract_author(page: Page) -> str:
 
 
 async def _extract_body_text(page: Page) -> str:
-    """Extract article body text from heise.de page.
+    """Extract article body text with Markdown-style headings from heise.de.
 
-    Uses all <p> elements within <article>. heise.de does not use
-    subheadings within article body text. For heise+ articles,
-    this returns only the visible teaser text. If no text is found
-    (some heise+ articles have no visible paragraphs), falls back
-    to the meta description.
+    Uses <p> and subheading elements within the article content area.
+    heise.de marks article subheadings with class "subheading" inside
+    div.article-content. Subheadings are prefixed with "## " or "### "
+    in the output. For heise+ articles, this returns only the visible
+    teaser text. If no text is found (some heise+ articles have no
+    visible paragraphs), falls back to the meta description.
     """
-    paragraphs = await page.query_selector_all("article p")
+    elements = await page.query_selector_all(
+        "article div.article-content > p,"
+        " article div.article-content > .subheading,"
+        " article > p"
+    )
 
     texts = []
-    for p in paragraphs:
-        text = await p.inner_text()
-        stripped = text.strip()
-        if stripped:
-            texts.append(stripped)
+    for el in elements:
+        tag = await el.evaluate("el => el.tagName")
+        text = (await el.inner_text()).strip()
+        if not text:
+            continue
+        if tag == "H2":
+            texts.append(f"\n## {text}")
+        elif tag == "H3":
+            texts.append(f"\n### {text}")
+        else:
+            texts.append(text)
 
     if texts:
-        return "\n".join(texts)
+        return "\n".join(texts).strip()
 
     # Fallback for heise+ articles with no visible paragraphs
     meta = await page.query_selector("meta[name='description']")
