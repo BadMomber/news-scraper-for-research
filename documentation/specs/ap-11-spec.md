@@ -22,13 +22,13 @@ Diese Kriterien werden in den bestehenden Volltextfilter (AP10) integriert. Der 
 
 ### Kriterium 2: Mindest-Trefferzahl
 
-- Artikel mit **weniger als 4 Suchbegriff-Kombinationen** im Artikeltext werden entfernt
-- Grenzwert: genau 4 Kombinationen wird **behalten** („fewer than four" schließt aus)
-- **Zählweise: Anzahl verschiedener vollständig gefundener Keyword-Paare** (fachliche Entscheidung, 2026-07-16; ersetzt die zunächst gewählte Summen-Zählweise):
-  - Ein Paar zählt als gefunden, wenn **beide Wörter** irgendwo im Text vorkommen — nicht nebeneinander, case-insensitive, Teilwort-Treffer zählen („Groks" enthält „Grok")
-  - Wie oft die Wörter vorkommen, ist unerheblich: ein Paar zählt höchstens einmal
-  - **Grundmenge sind alle im Crawl verwendeten Keyword-Paare** (Vereinigung der Spalte „Used Search Terms" über die gesamte CSV), nicht nur die dem Artikel zugeordneten Paare
-  - Beispiel: Text enthält 4× „Grok" sowie je 1× „Hitler", „Deepfake", „Verantwortung", „xAI" → die Paare Grok+Hitler, Grok+Deepfake, Grok+Verantwortung, Grok+xAI sind vollständig → 4 Kombinationen → Artikel bleibt
+- Artikel mit **weniger als 4 Suchbegriff-Treffern** im Artikeltext werden entfernt
+- Grenzwert: genau 4 Treffer wird **behalten** („fewer than four" schließt aus)
+- **Zählweise: Summe aller Vorkommen aller Suchwörter** (fachliche Entscheidung, 2026-07-16):
+  - Alle Wörter aller zugeordneten Keyword-Paare werden berücksichtigt; ein Wort, das in mehreren Paaren vorkommt (z.B. „Grok"), zählt nur einmal als Suchwort
+  - Jedes Vorkommen jedes Suchworts im Text zählt als ein Treffer
+  - Beispiel: Paar „Grok+Hitler", Text enthält 3× „Grok" und 2× „Hitler" → 5 Treffer → Artikel bleibt
+  - Case-insensitive, Teilwort-Treffer zählen (wie beim bestehenden Paar-Matching: „Groks" enthält „Grok")
 
 ### Filterverhalten
 
@@ -45,8 +45,8 @@ Diese Kriterien werden in den bestehenden Volltextfilter (AP10) integriert. Der 
 ## Akzeptanzkriterien
 
 - [x] Artikel mit Character Count < 2000 werden entfernt; genau 2000 bleibt erhalten
-- [x] Artikel mit weniger als 4 Suchbegriff-Kombinationen werden entfernt; genau 4 bleibt erhalten
-- [x] Zählweise: Anzahl verschiedener vollständig gefundener Paare aus allen Crawl-Paaren, case-insensitive
+- [x] Artikel mit weniger als 4 Suchbegriff-Treffern werden entfernt; genau 4 bleibt erhalten
+- [x] Zählweise: Summe aller Vorkommen aller eindeutigen Suchwörter, case-insensitive
 - [x] Das AP10-Kriterium (mindestens ein Paar vollständig im Text) gilt weiterhin
 - [x] Der Entfernungsgrund wird pro Artikel geloggt und im FilterResult zurückgegeben
 - [x] Der Filter ist ohne neuen Crawl auf lokale Daten anwendbar (`python -m src.fulltext_filter`)

@@ -7,14 +7,10 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 # Hard exclusion criteria (thesis methodology): articles with fewer than
-# 2000 characters or fewer than four distinct fully matched keyword pairs
-# in the body are removed. Boundary values (exactly 2000 / exactly 4) are
-# kept. A pair counts as matched when both of its words appear somewhere
-# in the text, regardless of how often. Matching runs against ALL pairs
-# used in the crawl (union of "Used Search Terms" across the whole CSV),
-# not only the pairs the article itself was found with.
+# 2000 characters or fewer than four search-term occurrences in the body
+# are removed. Boundary values (exactly 2000 / exactly 4) are kept.
 MIN_CHAR_COUNT = 2000
-MIN_MATCHING_PAIRS = 4
+MIN_TERM_OCCURRENCES = 4
 
 
 @dataclass
@@ -45,38 +41,37 @@ def _any_pair_matches(text: str, search_terms: str) -> bool:
     return any(_keyword_pair_matches(text, pair) for pair in pairs)
 
 
-def _split_pairs(search_terms: str) -> set[str]:
-    """Split a "Grok+Hitler; Grok+Deepfake" string into a set of pairs."""
-    return {p.strip() for p in search_terms.split(";") if p.strip()}
+def _unique_keywords(search_terms: str) -> set[str]:
+    """Extract unique lowercase keywords from all pairs.
 
-
-def _count_matching_pairs(text: str, pairs: set[str]) -> int:
-    """Count distinct keyword pairs that are fully present in text.
-
-    A pair counts when both of its words appear anywhere in the text
-    (case-insensitive), regardless of how often.
+    search_terms format: "Grok+Hitler; Grok+Deepfake"
+    A keyword shared by several pairs (here "Grok") is counted once.
     """
-    return sum(1 for pair in pairs if _keyword_pair_matches(text, pair))
+    return {
+        word.strip().lower()
+        for pair in search_terms.split(";")
+        for word in pair.split("+")
+        if word.strip()
+    }
 
 
-def _exclusion_reason(
-    text: str, search_terms: str, char_count: int, all_pairs: set[str],
-) -> str | None:
-    """Return why an article is excluded, or None if it passes all criteria.
+def _count_term_occurrences(text: str, search_terms: str) -> int:
+    """Sum all occurrences of all unique keywords in text (case-insensitive)."""
+    text_lower = text.lower()
+    return sum(text_lower.count(word) for word in _unique_keywords(search_terms))
 
-    all_pairs is the union of every keyword pair used in the crawl; the
-    combination count runs against this set, while the basic relevance
-    check (AP10) still uses only the article's own search_terms.
-    """
+
+def _exclusion_reason(text: str, search_terms: str, char_count: int) -> str | None:
+    """Return why an article is excluded, or None if it passes all criteria."""
     if not _any_pair_matches(text, search_terms):
         return "kein Suchbegriff-Paar im Text"
     if char_count < MIN_CHAR_COUNT:
         return f"unter {MIN_CHAR_COUNT} Zeichen ({char_count})"
-    matching_pairs = _count_matching_pairs(text, all_pairs)
-    if matching_pairs < MIN_MATCHING_PAIRS:
+    occurrences = _count_term_occurrences(text, search_terms)
+    if occurrences < MIN_TERM_OCCURRENCES:
         return (
-            f"weniger als {MIN_MATCHING_PAIRS} Suchbegriff-Kombinationen"
-            f" ({matching_pairs})"
+            f"weniger als {MIN_TERM_OCCURRENCES} Suchbegriff-Treffer"
+            f" ({occurrences})"
         )
     return None
 
@@ -86,9 +81,8 @@ def filter_articles(csv_path: Path, texte_dir: Path) -> FilterResult:
 
     Removes articles whose text contains none of their keyword pairs,
     has fewer than MIN_CHAR_COUNT characters, or fewer than
-    MIN_MATCHING_PAIRS fully matched keyword pairs (checked against all
-    pairs used in the crawl). Rewrites the CSV with only the kept
-    articles and deletes text files of removed ones.
+    MIN_TERM_OCCURRENCES search-term occurrences. Rewrites the CSV with
+    only the kept articles and deletes text files of removed ones.
     """
     with open(csv_path, encoding="utf-8") as f:
         reader = csv.reader(f)
@@ -103,12 +97,6 @@ def filter_articles(csv_path: Path, texte_dir: Path) -> FilterResult:
     char_count_idx = header.index("Character Count")
     textdatei_idx = header.index("Textdatei")
     titel_idx = header.index("Titel")
-
-    # Pair universe: every keyword pair the crawl used, across all articles
-    all_pairs: set[str] = set()
-    for row in rows:
-        all_pairs |= _split_pairs(row[search_terms_idx])
-    logger.info("Volltextfilter: %d Keyword-Paare im Crawl verwendet", len(all_pairs))
 
     for row in rows:
         search_terms = row[search_terms_idx]
@@ -126,7 +114,7 @@ def filter_articles(csv_path: Path, texte_dir: Path) -> FilterResult:
         except ValueError:
             char_count = len(text)
 
-        reason = _exclusion_reason(text, search_terms, char_count, all_pairs)
+        reason = _exclusion_reason(text, search_terms, char_count)
         if reason is None:
             kept_rows.append(row)
         else:

@@ -6,9 +6,8 @@ import pytest
 from src.fulltext_filter import (
     FilterResult,
     _any_pair_matches,
-    _count_matching_pairs,
+    _count_term_occurrences,
     _keyword_pair_matches,
-    _split_pairs,
     filter_articles,
 )
 
@@ -53,40 +52,23 @@ class TestAnyPairMatches:
         assert _any_pair_matches("Grok und Hitler", "Grok+Hitler")
 
 
-class TestSplitPairs:
-    def test_splits_and_strips(self):
-        assert _split_pairs("Grok+Hitler; Grok+Deepfake") == {
-            "Grok+Hitler", "Grok+Deepfake",
-        }
-
-    def test_duplicates_collapse(self):
-        assert _split_pairs("Grok+Hitler; Grok+Hitler") == {"Grok+Hitler"}
-
-    def test_empty_string(self):
-        assert _split_pairs("") == set()
-
-
-class TestCountMatchingPairs:
-    def test_all_pairs_match(self):
-        text = "Grok erzeugt Hitler-Deepfakes, sagt xAI, ohne Verantwortung."
-        pairs = {"Grok+Hitler", "Grok+Deepfake", "Grok+xAI", "Grok+Verantwortung"}
-        assert _count_matching_pairs(text, pairs) == 4
-
-    def test_partially_matched_pair_not_counted(self):
-        # Hitler present, Deepfake missing: only the first pair counts
-        text = "Grok erzeugt Hitler-Bilder"
-        assert _count_matching_pairs(text, {"Grok+Hitler", "Grok+Deepfake"}) == 1
-
-    def test_repeated_words_count_pair_once(self):
-        # Word frequency is irrelevant: one fully present pair counts once
-        text = "Grok Grok Grok Grok und Hitler Hitler"
-        assert _count_matching_pairs(text, {"Grok+Hitler"}) == 1
+class TestCountTermOccurrences:
+    def test_sums_occurrences_of_both_words(self):
+        text = "Grok zeigt Hitler. Grok mag Hitler nicht. Grok bleibt."
+        assert _count_term_occurrences(text, "Grok+Hitler") == 5
 
     def test_case_insensitive(self):
-        assert _count_matching_pairs("grok und HITLER", {"Grok+Hitler"}) == 1
+        assert _count_term_occurrences("grok GROK Grok", "Grok+Hitler") == 3
+
+    def test_shared_word_across_pairs_counted_once(self):
+        text = "Grok Grok Deepfake"
+        assert _count_term_occurrences(text, "Grok+Hitler; Grok+Deepfake") == 3
 
     def test_empty_text(self):
-        assert _count_matching_pairs("", {"Grok+Hitler"}) == 0
+        assert _count_term_occurrences("", "Grok+Hitler") == 0
+
+    def test_counts_substring_occurrences(self):
+        assert _count_term_occurrences("Groks Hitler-Bild", "Grok+Hitler") == 2
 
 
 def _write_test_csv(csv_path: Path, rows: list[list[str]]) -> None:
@@ -106,10 +88,9 @@ def _write_text_file(texte_dir: Path, filename: str, content: str) -> None:
     (texte_dir / filename).write_text(content, encoding="utf-8")
 
 
-# Passes all criteria: 4 distinct pairs fully present in the text.
+# Passes all criteria for "Grok+Hitler": pair present, 4 term occurrences.
 # The character count criterion uses the CSV column, not the text length.
-MATCHING_TERMS = "Grok+Hitler; Grok+Deepfake; Grok+xAI; Grok+Verantwortung"
-MATCHING_TEXT = "Grok erzeugt Hitler-Deepfakes, sagt xAI, ohne Verantwortung."
+MATCHING_TEXT = "Grok erzeugt Hitler-Bilder. Grok zeigt Hitler erneut."
 
 
 class TestFilterArticles:
@@ -120,7 +101,7 @@ class TestFilterArticles:
 
         _write_text_file(texte_dir, "a.txt", MATCHING_TEXT)
         _write_test_csv(csv_path, [
-            ["2025-10-01", "url", "Titel A", "Autor", MATCHING_TERMS, "2500", "", "a.txt"],
+            ["2025-10-01", "url", "Titel A", "Autor", "Grok+Hitler", "2500", "", "a.txt"],
         ])
 
         result = filter_articles(csv_path, texte_dir)
@@ -153,8 +134,8 @@ class TestFilterArticles:
         _write_text_file(texte_dir, "a.txt", MATCHING_TEXT)
         _write_text_file(texte_dir, "b.txt", "Etwas anderes")
         _write_test_csv(csv_path, [
-            ["2025-10-01", "u1", "Match", "A", MATCHING_TERMS, "2500", "", "a.txt"],
-            ["2025-10-01", "u2", "NoMatch", "A", MATCHING_TERMS, "2500", "", "b.txt"],
+            ["2025-10-01", "u1", "Match", "A", "Grok+Hitler", "2500", "", "a.txt"],
+            ["2025-10-01", "u2", "NoMatch", "A", "Grok+Hitler", "2500", "", "b.txt"],
         ])
 
         result = filter_articles(csv_path, texte_dir)
@@ -164,126 +145,22 @@ class TestFilterArticles:
         assert (texte_dir / "a.txt").exists()
         assert not (texte_dir / "b.txt").exists()
 
-    def test_removes_article_with_three_matching_pairs(self, tmp_path):
+    def test_multiple_pairs_one_matches(self, tmp_path):
         csv_path = tmp_path / "out.csv"
         texte_dir = tmp_path / "texte"
         texte_dir.mkdir()
 
-        # Only 3 of 4 pairs fully present (Verantwortung missing)
         _write_text_file(
             texte_dir, "a.txt",
-            "Grok erzeugt Hitler-Deepfakes, sagt xAI.",
+            "Ein Deepfake von Grok. Grok erstellt noch ein Deepfake.",
         )
         _write_test_csv(csv_path, [
-            ["2025-10-01", "url", "Wenig", "A", MATCHING_TERMS, "2500", "", "a.txt"],
-        ])
-
-        result = filter_articles(csv_path, texte_dir)
-
-        assert result.removed == 1
-        assert "Suchbegriff-Kombinationen (3)" in result.removal_reasons["Wenig"]
-        assert not (texte_dir / "a.txt").exists()
-
-    def test_word_frequency_does_not_help(self, tmp_path):
-        csv_path = tmp_path / "out.csv"
-        texte_dir = tmp_path / "texte"
-        texte_dir.mkdir()
-
-        # Many occurrences of one pair are still just one combination
-        _write_text_file(
-            texte_dir, "a.txt",
-            "Grok Grok Grok Grok und Hitler Hitler Hitler Hitler",
-        )
-        _write_test_csv(csv_path, [
-            ["2025-10-01", "url", "EinPaar", "A", "Grok+Hitler", "2500", "", "a.txt"],
-        ])
-
-        result = filter_articles(csv_path, texte_dir)
-
-        assert result.removed == 1
-        assert "Suchbegriff-Kombinationen (1)" in result.removal_reasons["EinPaar"]
-
-    def test_pairs_from_other_articles_count(self, tmp_path):
-        csv_path = tmp_path / "out.csv"
-        texte_dir = tmp_path / "texte"
-        texte_dir.mkdir()
-
-        # Article B was found via a single pair, but its text contains
-        # four pairs known from the crawl (assigned to article A) —
-        # the pair universe spans the whole CSV, so B is kept
-        _write_text_file(texte_dir, "a.txt", MATCHING_TEXT)
-        _write_text_file(texte_dir, "b.txt", MATCHING_TEXT)
-        _write_test_csv(csv_path, [
-            ["2025-10-01", "u1", "Viele Paare", "A", MATCHING_TERMS, "2500", "", "a.txt"],
-            ["2025-10-01", "u2", "Ein Paar", "A", "Grok+Hitler", "2500", "", "b.txt"],
-        ])
-
-        result = filter_articles(csv_path, texte_dir)
-
-        assert result.kept == 2
-        assert result.removed == 0
-
-    def test_removes_article_below_2000_chars(self, tmp_path):
-        csv_path = tmp_path / "out.csv"
-        texte_dir = tmp_path / "texte"
-        texte_dir.mkdir()
-
-        _write_text_file(texte_dir, "a.txt", MATCHING_TEXT)
-        _write_test_csv(csv_path, [
-            ["2025-10-01", "url", "Kurz", "A", MATCHING_TERMS, "1999", "", "a.txt"],
-        ])
-
-        result = filter_articles(csv_path, texte_dir)
-
-        assert result.removed == 1
-        assert "1999" in result.removal_reasons["Kurz"]
-        assert not (texte_dir / "a.txt").exists()
-
-    def test_keeps_article_with_exactly_2000_chars(self, tmp_path):
-        csv_path = tmp_path / "out.csv"
-        texte_dir = tmp_path / "texte"
-        texte_dir.mkdir()
-
-        _write_text_file(texte_dir, "a.txt", MATCHING_TEXT)
-        _write_test_csv(csv_path, [
-            ["2025-10-01", "url", "Grenzfall", "A", MATCHING_TERMS, "2000", "", "a.txt"],
+            ["2025-10-01", "url", "Titel", "A", "Grok+Hitler; Grok+Deepfake", "2500", "", "a.txt"],
         ])
 
         result = filter_articles(csv_path, texte_dir)
 
         assert result.kept == 1
-
-    def test_keeps_article_with_exactly_four_matching_pairs(self, tmp_path):
-        csv_path = tmp_path / "out.csv"
-        texte_dir = tmp_path / "texte"
-        texte_dir.mkdir()
-
-        # 4 of 5 pairs fully present (Musk missing)
-        _write_text_file(texte_dir, "a.txt", MATCHING_TEXT)
-        _write_test_csv(csv_path, [
-            ["2025-10-01", "url", "Grenzfall", "A",
-             MATCHING_TERMS + "; Grok+Musk", "2500", "", "a.txt"],
-        ])
-
-        result = filter_articles(csv_path, texte_dir)
-
-        assert result.kept == 1
-
-    def test_char_count_fallback_to_text_length(self, tmp_path):
-        csv_path = tmp_path / "out.csv"
-        texte_dir = tmp_path / "texte"
-        texte_dir.mkdir()
-
-        # Empty Character Count column: fall back to actual text length
-        _write_text_file(texte_dir, "a.txt", MATCHING_TEXT)
-        _write_test_csv(csv_path, [
-            ["2025-10-01", "url", "OhneCount", "A", MATCHING_TERMS, "", "", "a.txt"],
-        ])
-
-        result = filter_articles(csv_path, texte_dir)
-
-        assert result.removed == 1
-        assert "Zeichen" in result.removal_reasons["OhneCount"]
 
     def test_csv_valid_after_filter(self, tmp_path):
         csv_path = tmp_path / "out.csv"
@@ -293,8 +170,8 @@ class TestFilterArticles:
         _write_text_file(texte_dir, "a.txt", MATCHING_TEXT)
         _write_text_file(texte_dir, "b.txt", "Irrelevant")
         _write_test_csv(csv_path, [
-            ["2025-10-01", "u1", "Keep", "A", MATCHING_TERMS, "2500", "", "a.txt"],
-            ["2025-10-01", "u2", "Remove", "A", MATCHING_TERMS, "2500", "", "b.txt"],
+            ["2025-10-01", "u1", "Keep", "A", "Grok+Hitler", "2500", "", "a.txt"],
+            ["2025-10-01", "u2", "Remove", "A", "Grok+Hitler", "2500", "", "b.txt"],
         ])
 
         filter_articles(csv_path, texte_dir)
@@ -321,6 +198,84 @@ class TestFilterArticles:
         assert result.kept == 0
         assert result.removed == 0
 
+    def test_removes_article_below_2000_chars(self, tmp_path):
+        csv_path = tmp_path / "out.csv"
+        texte_dir = tmp_path / "texte"
+        texte_dir.mkdir()
+
+        _write_text_file(texte_dir, "a.txt", MATCHING_TEXT)
+        _write_test_csv(csv_path, [
+            ["2025-10-01", "url", "Kurz", "A", "Grok+Hitler", "1999", "", "a.txt"],
+        ])
+
+        result = filter_articles(csv_path, texte_dir)
+
+        assert result.removed == 1
+        assert "1999" in result.removal_reasons["Kurz"]
+        assert not (texte_dir / "a.txt").exists()
+
+    def test_keeps_article_with_exactly_2000_chars(self, tmp_path):
+        csv_path = tmp_path / "out.csv"
+        texte_dir = tmp_path / "texte"
+        texte_dir.mkdir()
+
+        _write_text_file(texte_dir, "a.txt", MATCHING_TEXT)
+        _write_test_csv(csv_path, [
+            ["2025-10-01", "url", "Grenzfall", "A", "Grok+Hitler", "2000", "", "a.txt"],
+        ])
+
+        result = filter_articles(csv_path, texte_dir)
+
+        assert result.kept == 1
+
+    def test_removes_article_with_three_term_occurrences(self, tmp_path):
+        csv_path = tmp_path / "out.csv"
+        texte_dir = tmp_path / "texte"
+        texte_dir.mkdir()
+
+        # Pair matches, but only 3 occurrences total (Grok 2x, Hitler 1x)
+        _write_text_file(texte_dir, "a.txt", "Grok und Hitler und Grok")
+        _write_test_csv(csv_path, [
+            ["2025-10-01", "url", "Wenig", "A", "Grok+Hitler", "2500", "", "a.txt"],
+        ])
+
+        result = filter_articles(csv_path, texte_dir)
+
+        assert result.removed == 1
+        assert "Suchbegriff-Treffer" in result.removal_reasons["Wenig"]
+        assert not (texte_dir / "a.txt").exists()
+
+    def test_keeps_article_with_exactly_four_term_occurrences(self, tmp_path):
+        csv_path = tmp_path / "out.csv"
+        texte_dir = tmp_path / "texte"
+        texte_dir.mkdir()
+
+        # Exactly 4 occurrences (Grok 2x, Hitler 2x)
+        _write_text_file(texte_dir, "a.txt", MATCHING_TEXT)
+        _write_test_csv(csv_path, [
+            ["2025-10-01", "url", "Grenzfall", "A", "Grok+Hitler", "2500", "", "a.txt"],
+        ])
+
+        result = filter_articles(csv_path, texte_dir)
+
+        assert result.kept == 1
+
+    def test_char_count_fallback_to_text_length(self, tmp_path):
+        csv_path = tmp_path / "out.csv"
+        texte_dir = tmp_path / "texte"
+        texte_dir.mkdir()
+
+        # Empty Character Count column: fall back to actual text length
+        _write_text_file(texte_dir, "a.txt", MATCHING_TEXT)
+        _write_test_csv(csv_path, [
+            ["2025-10-01", "url", "OhneCount", "A", "Grok+Hitler", "", "", "a.txt"],
+        ])
+
+        result = filter_articles(csv_path, texte_dir)
+
+        assert result.removed == 1
+        assert "Zeichen" in result.removal_reasons["OhneCount"]
+
     def test_removed_titles_in_result(self, tmp_path):
         csv_path = tmp_path / "out.csv"
         texte_dir = tmp_path / "texte"
@@ -328,7 +283,7 @@ class TestFilterArticles:
 
         _write_text_file(texte_dir, "a.txt", "Nichts relevantes")
         _write_test_csv(csv_path, [
-            ["2025-10-01", "url", "Mein Titel", "A", "Grok+Hitler", "2500", "", "a.txt"],
+            ["2025-10-01", "url", "Mein Titel", "A", "Grok+Hitler", "100", "", "a.txt"],
         ])
 
         result = filter_articles(csv_path, texte_dir)
@@ -340,9 +295,9 @@ class TestFilterArticles:
         texte_dir = tmp_path / "texte"
         texte_dir.mkdir()
 
-        _write_text_file(texte_dir, "a.txt", MATCHING_TEXT.lower())
+        _write_text_file(texte_dir, "a.txt", "grok und hitler, GROK mag HITLER")
         _write_test_csv(csv_path, [
-            ["2025-10-01", "url", "Titel", "A", MATCHING_TERMS, "2500", "", "a.txt"],
+            ["2025-10-01", "url", "Titel", "A", "Grok+Hitler", "2500", "", "a.txt"],
         ])
 
         result = filter_articles(csv_path, texte_dir)
