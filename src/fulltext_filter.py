@@ -1,9 +1,19 @@
+import argparse
 import csv
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from src.config import load_config
+
 logger = logging.getLogger(__name__)
+
+# Default hard exclusion criteria: articles with fewer than 2000
+# characters or fewer than four search-term occurrences in the body are
+# removed. Boundary values (exactly 2000 / exactly 4) are kept.
+# Configurable via the "fulltext_filter" section in seed.yaml.
+MIN_CHAR_COUNT = 2000
+MIN_TERM_OCCURRENCES = 4
 
 
 @dataclass
@@ -12,6 +22,7 @@ class FilterResult:
     kept: int
     removed: int
     removed_titles: list[str] = field(default_factory=list)
+    removal_reasons: dict[str, str] = field(default_factory=dict)
 
 
 def _keyword_pair_matches(text: str, keyword_pair: str) -> bool:
@@ -33,12 +44,64 @@ def _any_pair_matches(text: str, search_terms: str) -> bool:
     return any(_keyword_pair_matches(text, pair) for pair in pairs)
 
 
-def filter_articles(csv_path: Path, texte_dir: Path) -> FilterResult:
-    """Remove articles whose text doesn't contain any of their keyword pairs.
+def _unique_keywords(search_terms: str) -> set[str]:
+    """Extract unique lowercase keywords from all pairs.
 
-    Reads the CSV, checks each article's text file, rewrites CSV with only
-    matching articles, and deletes text files for removed articles.
+    search_terms format: "Grok+Hitler; Grok+Deepfake"
+    A keyword shared by several pairs (here "Grok") is counted once.
     """
+    return {
+        word.strip().lower()
+        for pair in search_terms.split(";")
+        for word in pair.split("+")
+        if word.strip()
+    }
+
+
+def _count_term_occurrences(text: str, search_terms: str) -> int:
+    """Sum all occurrences of all unique keywords in text (case-insensitive)."""
+    text_lower = text.lower()
+    return sum(text_lower.count(word) for word in _unique_keywords(search_terms))
+
+
+def _exclusion_reason(
+    text: str,
+    search_terms: str,
+    char_count: int,
+    min_char_count: int,
+    min_term_occurrences: int,
+) -> str | None:
+    """Return why an article is excluded, or None if it passes all criteria."""
+    if not _any_pair_matches(text, search_terms):
+        return "kein Suchbegriff-Paar im Text"
+    if char_count < min_char_count:
+        return f"unter {min_char_count} Zeichen ({char_count})"
+    occurrences = _count_term_occurrences(text, search_terms)
+    if occurrences < min_term_occurrences:
+        return (
+            f"weniger als {min_term_occurrences} Suchbegriff-Treffer"
+            f" ({occurrences})"
+        )
+    return None
+
+
+def filter_articles(
+    csv_path: Path,
+    texte_dir: Path,
+    min_char_count: int = MIN_CHAR_COUNT,
+    min_term_occurrences: int = MIN_TERM_OCCURRENCES,
+) -> FilterResult:
+    """Apply the hard exclusion criteria to already crawled results.
+
+    Removes articles whose text contains none of their keyword pairs,
+    has fewer than min_char_count characters, or fewer than
+    min_term_occurrences search-term occurrences. Rewrites the CSV with
+    only the kept articles and deletes text files of removed ones.
+    """
+    logger.info(
+        "Volltextfilter: Kriterien min. %d Zeichen, min. %d Suchbegriff-Treffer",
+        min_char_count, min_term_occurrences,
+    )
     with open(csv_path, encoding="utf-8") as f:
         reader = csv.reader(f)
         header = next(reader)
@@ -46,8 +109,10 @@ def filter_articles(csv_path: Path, texte_dir: Path) -> FilterResult:
 
     kept_rows: list[list[str]] = []
     removed_titles: list[str] = []
+    removal_reasons: dict[str, str] = {}
 
     search_terms_idx = header.index("Used Search Terms")
+    char_count_idx = header.index("Character Count")
     textdatei_idx = header.index("Textdatei")
     titel_idx = header.index("Titel")
 
@@ -62,10 +127,19 @@ def filter_articles(csv_path: Path, texte_dir: Path) -> FilterResult:
         else:
             text = ""
 
-        if _any_pair_matches(text, search_terms):
+        try:
+            char_count = int(row[char_count_idx])
+        except ValueError:
+            char_count = len(text)
+
+        reason = _exclusion_reason(
+            text, search_terms, char_count, min_char_count, min_term_occurrences,
+        )
+        if reason is None:
             kept_rows.append(row)
         else:
             removed_titles.append(title)
+            removal_reasons[title] = reason
             if text_path.exists():
                 text_path.unlink()
 
@@ -80,6 +154,7 @@ def filter_articles(csv_path: Path, texte_dir: Path) -> FilterResult:
         kept=len(kept_rows),
         removed=len(removed_titles),
         removed_titles=removed_titles,
+        removal_reasons=removal_reasons,
     )
 
     logger.info(
@@ -87,6 +162,47 @@ def filter_articles(csv_path: Path, texte_dir: Path) -> FilterResult:
         result.total, result.kept, result.removed,
     )
     for title in removed_titles:
-        logger.info("  Entfernt: %s", title)
+        logger.info("  Entfernt (%s): %s", removal_reasons[title], title)
 
     return result
+
+
+def main() -> None:
+    """Apply the filter to existing crawl results without re-crawling."""
+    parser = argparse.ArgumentParser(
+        description=(
+            "Wendet die harten Ausschlusskriterien auf bereits gecrawlte "
+            "Ergebnisse an (CSV wird neu geschrieben, Textdateien "
+            "aussortierter Artikel werden gelöscht)."
+        ),
+    )
+    parser.add_argument(
+        "--csv", type=Path, default=Path("ergebnisse.csv"),
+        help="Pfad zur Ergebnis-CSV (Default: ergebnisse.csv)",
+    )
+    parser.add_argument(
+        "--texte", type=Path, default=Path("texte"),
+        help="Verzeichnis mit den Artikel-Textdateien (Default: texte/)",
+    )
+    parser.add_argument(
+        "--seed", type=Path, default=Path("seed.yaml"),
+        help="Pfad zur seed.yaml mit den Filter-Schwellwerten (Default: seed.yaml)",
+    )
+    args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+
+    min_char_count = MIN_CHAR_COUNT
+    min_term_occurrences = MIN_TERM_OCCURRENCES
+    if args.seed.exists():
+        config = load_config(args.seed)
+        min_char_count = config.min_char_count
+        min_term_occurrences = config.min_term_occurrences
+    else:
+        logger.info("Keine %s gefunden — verwende Default-Schwellwerte", args.seed)
+
+    filter_articles(args.csv, args.texte, min_char_count, min_term_occurrences)
+
+
+if __name__ == "__main__":
+    main()

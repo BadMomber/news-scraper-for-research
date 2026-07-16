@@ -165,12 +165,15 @@ class TestExportCsv:
 
         assert row[2] == "Titel, mit Komma"
 
-    def test_default_path(self):
+    def test_default_path(self, tmp_path, monkeypatch):
+        # Run in tmp dir so a real ergebnisse.csv in the repo root
+        # is never overwritten or deleted by this test
+        monkeypatch.chdir(tmp_path)
         articles = []
         path = export_csv(articles)
 
         assert path == Path("ergebnisse.csv")
-        path.unlink()  # cleanup
+        assert path.exists()
 
 
 class TestUrlToSlug:

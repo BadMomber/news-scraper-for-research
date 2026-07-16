@@ -1,0 +1,76 @@
+# Story: Harte Ausschlusskriterien — Mindestlänge & Mindest-Trefferzahl
+
+## User Story
+
+Als Rechercheurin möchte ich, dass Artikel unter 2000 Zeichen oder mit weniger als vier Suchbegriff-Treffern im Volltext automatisch aussortiert werden, damit die Ergebnismenge nur Artikel mit ausreichend Substanz und thematischer Relevanz enthält.
+
+## Beschreibung
+
+Zwei harte Ausschlusskriterien sortieren Artikel aus, die zwar von der Suche gefunden wurden, aber für eine inhaltliche Analyse zu kurz sind oder das Suchthema nur am Rande erwähnen: eine Mindestlänge von 2000 Zeichen und mindestens vier Suchbegriff-Treffer im Artikeltext.
+
+Diese Kriterien werden in den bestehenden Volltextfilter (AP10) integriert. Der Filter läuft weiterhin nach dem Crawlen als lokale Operation auf `ergebnisse.csv` und `texte/` — zusätzlich ist er jetzt als eigenständiger Lauf ohne neuen Crawl aufrufbar, um bereits vorhandene lokale Ergebnisse nachträglich zu filtern.
+
+## Anforderungen
+
+### Kriterium 1: Mindestlänge
+
+- Artikel mit **Character Count < `min_char_count`** (Default 2000) werden entfernt
+- Grenzwert: genau `min_char_count` Zeichen wird **behalten** (nur „unter" schließt aus)
+- Grundlage ist die CSV-Spalte „Character Count"; ist sie leer oder ungültig, wird die Länge der Textdatei verwendet
+
+### Kriterium 2: Mindest-Trefferzahl
+
+- Artikel mit **weniger als `min_term_occurrences` Suchbegriff-Treffern** (Default 4) im Artikeltext werden entfernt
+- Grenzwert: genau `min_term_occurrences` Treffer wird **behalten** (nur „weniger als" schließt aus)
+- **Zählweise: Summe aller Vorkommen aller Suchwörter:**
+  - Alle Wörter aller zugeordneten Keyword-Paare werden berücksichtigt; ein Wort, das in mehreren Paaren vorkommt (z.B. „Grok"), zählt nur einmal als Suchwort
+  - Jedes Vorkommen jedes Suchworts im Text zählt als ein Treffer
+  - Beispiel: Paar „Grok+Hitler", Text enthält 3× „Grok" und 2× „Hitler" → 5 Treffer → Artikel bleibt
+  - Case-insensitive, Teilwort-Treffer zählen (wie beim bestehenden Paar-Matching: „Groks" enthält „Grok")
+
+### Filterverhalten
+
+- Das bestehende Kriterium aus AP10 (mindestens ein vollständiges Keyword-Paar im Text) bleibt erhalten
+- Entfernte Artikel: aus der CSV entfernt, Textdatei in `texte/` gelöscht
+- Pro entferntem Artikel wird der **Grund geloggt** (kein Paar / unter 2000 Zeichen / unter 4 Treffer)
+
+### Konfiguration
+
+- Die Schwellwerte sind über den Abschnitt `fulltext_filter` in `seed.yaml` konfigurierbar:
+  ```yaml
+  fulltext_filter:
+    min_char_count: 2000
+    min_term_occurrences: 4
+  ```
+- Fehlt der Abschnitt (oder einzelne Werte), gelten die Defaults 2000 / 4
+
+### Eigenständiger Aufruf (ohne neuen Crawl)
+
+- `python -m src.fulltext_filter` wendet den Filter auf bestehende lokale Ergebnisse an
+- Optionen: `--csv` (Default: `ergebnisse.csv`), `--texte` (Default: `texte/`), `--seed` (Default: `seed.yaml`)
+- Existiert die seed-Datei nicht, gelten die Default-Schwellwerte
+- Der Filter bleibt zusätzlich Teil des normalen Gesamtlaufs (`main.py`)
+
+## Akzeptanzkriterien
+
+- [x] Artikel mit Character Count < 2000 werden entfernt; genau 2000 bleibt erhalten
+- [x] Artikel mit weniger als 4 Suchbegriff-Treffern werden entfernt; genau 4 bleibt erhalten
+- [x] Zählweise: Summe aller Vorkommen aller eindeutigen Suchwörter, case-insensitive
+- [x] Das AP10-Kriterium (mindestens ein Paar vollständig im Text) gilt weiterhin
+- [x] Der Entfernungsgrund wird pro Artikel geloggt und im FilterResult zurückgegeben
+- [x] Der Filter ist ohne neuen Crawl auf lokale Daten anwendbar (`python -m src.fulltext_filter`)
+- [x] Die Schwellwerte sind über `seed.yaml` konfigurierbar; ohne Konfiguration gelten 2000 / 4
+- [x] Der Volltextfilter ist in der README ausführlich beschrieben
+- [x] main.py bleibt unverändert lauffähig (Filter läuft weiterhin im Gesamtlauf)
+
+## Bekannte Grenzen der Kriterien
+
+- **Paywall-Teaser:** Wenn nur der Teaser statt des Volltexts extrahiert werden konnte, greifen beide Kriterien auf dem Teaser — lange Paywall-Artikel können dadurch am Zeichen-Kriterium scheitern
+- **Abkürzungen und Synonyme:** Es zählt nur das wörtliche Suchwort. Ein Artikel, der durchgehend „KI" statt „Künstliche Intelligenz" schreibt, erreicht die Trefferzahl für das ausgeschriebene Suchwort nicht
+
+## Abgrenzung
+
+- Kein erneuter Crawl — der Filter arbeitet ausschließlich auf lokal vorhandenen Daten
+- Kein Stemming oder Fuzzy-Matching — exakte Teilstring-Suche (case-insensitive) wie in AP10
+- Keine Änderung an Such- oder Scraping-Logik
+- Kein Backup durch den Filter selbst — wer die Originaldaten behalten will, sichert CSV und `texte/` vorher

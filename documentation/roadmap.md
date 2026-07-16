@@ -24,6 +24,7 @@
 | AP5 | Deduplizierung & CSV-Export | ✅ | `feature/ap5-dedup-csv` | Article dataclass, Dedup, CSV UTF-8, Paywall-Spalte, 92 Tests grün |
 | AP6 | Verifikation | ✅ | `feature/ap6-verification` | Link-Check, Titel/Datum-Abgleich, Bericht, 102 Tests grün |
 | AP7 | Gesamtlauf & Feinschliff | ✅ | `feature/ap7-polish` | Fortschritts-Logging, taz Agentur-Autoren, heise+ 0-Zeichen Fix, 103 Tests grün |
+| AP11 | Harte Ausschlusskriterien | 🔄 | `feature/ap11-exclusion-criteria` | <2000 Zeichen & <4 Suchbegriff-Treffer, konfigurierbar via seed.yaml, Standalone-Lauf `python -m src.fulltext_filter`, README-Doku, 152 Tests grün |
 
 ## Abhängigkeiten
 
