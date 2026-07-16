@@ -2,13 +2,11 @@
 
 ## User Story
 
-Als Rechercheurin möchte ich, dass Artikel unter 2000 Zeichen oder mit weniger als vier Suchbegriff-Treffern im Volltext automatisch aussortiert werden, damit die Ergebnismenge den harten Ausschlusskriterien meiner Masterarbeit entspricht.
+Als Rechercheurin möchte ich, dass Artikel unter 2000 Zeichen oder mit weniger als vier Suchbegriff-Treffern im Volltext automatisch aussortiert werden, damit die Ergebnismenge nur Artikel mit ausreichend Substanz und thematischer Relevanz enthält.
 
 ## Beschreibung
 
-Die Masterarbeit definiert zwei harte Ausschlusskriterien:
-
-> Two hard exclusion criteria were applied: a character count below 2,000 and fewer than four searchterm matches in the article body.
+Zwei harte Ausschlusskriterien sortieren Artikel aus, die zwar von der Suche gefunden wurden, aber für eine inhaltliche Analyse zu kurz sind oder das Suchthema nur am Rande erwähnen: eine Mindestlänge von 2000 Zeichen und mindestens vier Suchbegriff-Treffer im Artikeltext.
 
 Diese Kriterien werden in den bestehenden Volltextfilter (AP10) integriert. Der Filter läuft weiterhin nach dem Crawlen als lokale Operation auf `ergebnisse.csv` und `texte/` — zusätzlich ist er jetzt als eigenständiger Lauf ohne neuen Crawl aufrufbar, um bereits vorhandene lokale Ergebnisse nachträglich zu filtern.
 
@@ -17,14 +15,14 @@ Diese Kriterien werden in den bestehenden Volltextfilter (AP10) integriert. Der 
 ### Kriterium 1: Mindestlänge
 
 - Artikel mit **Character Count < 2000** werden entfernt
-- Grenzwert: genau 2000 Zeichen wird **behalten** („below 2,000" schließt aus)
+- Grenzwert: genau 2000 Zeichen wird **behalten** (nur „unter 2000" schließt aus)
 - Grundlage ist die CSV-Spalte „Character Count"; ist sie leer oder ungültig, wird die Länge der Textdatei verwendet
 
 ### Kriterium 2: Mindest-Trefferzahl
 
 - Artikel mit **weniger als 4 Suchbegriff-Treffern** im Artikeltext werden entfernt
-- Grenzwert: genau 4 Treffer wird **behalten** („fewer than four" schließt aus)
-- **Zählweise: Summe aller Vorkommen aller Suchwörter** (fachliche Entscheidung, 2026-07-16):
+- Grenzwert: genau 4 Treffer wird **behalten** (nur „weniger als 4" schließt aus)
+- **Zählweise: Summe aller Vorkommen aller Suchwörter:**
   - Alle Wörter aller zugeordneten Keyword-Paare werden berücksichtigt; ein Wort, das in mehreren Paaren vorkommt (z.B. „Grok"), zählt nur einmal als Suchwort
   - Jedes Vorkommen jedes Suchworts im Text zählt als ein Treffer
   - Beispiel: Paar „Grok+Hitler", Text enthält 3× „Grok" und 2× „Hitler" → 5 Treffer → Artikel bleibt
@@ -51,6 +49,11 @@ Diese Kriterien werden in den bestehenden Volltextfilter (AP10) integriert. Der 
 - [x] Der Entfernungsgrund wird pro Artikel geloggt und im FilterResult zurückgegeben
 - [x] Der Filter ist ohne neuen Crawl auf lokale Daten anwendbar (`python -m src.fulltext_filter`)
 - [x] main.py bleibt unverändert lauffähig (Filter läuft weiterhin im Gesamtlauf)
+
+## Bekannte Grenzen der Kriterien
+
+- **Paywall-Teaser:** Wenn nur der Teaser statt des Volltexts extrahiert werden konnte, greifen beide Kriterien auf dem Teaser — lange Paywall-Artikel können dadurch am Zeichen-Kriterium scheitern
+- **Abkürzungen und Synonyme:** Es zählt nur das wörtliche Suchwort. Ein Artikel, der durchgehend „KI" statt „Künstliche Intelligenz" schreibt, erreicht die Trefferzahl für das ausgeschriebene Suchwort nicht
 
 ## Abgrenzung
 

@@ -6,9 +6,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Hard exclusion criteria (thesis methodology): articles with fewer than
-# 2000 characters or fewer than four search-term occurrences in the body
-# are removed. Boundary values (exactly 2000 / exactly 4) are kept.
+# Hard exclusion criteria: articles with fewer than 2000 characters or
+# fewer than four search-term occurrences in the body are removed.
+# Boundary values (exactly 2000 / exactly 4) are kept.
 MIN_CHAR_COUNT = 2000
 MIN_TERM_OCCURRENCES = 4
 
