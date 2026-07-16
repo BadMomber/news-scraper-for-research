@@ -29,6 +29,13 @@ date_range:
   start: "2025-07-08"
   end: "2026-02-08"
 
+# Schwellwerte des Volltextfilters (optional, hier die Defaults):
+#   min_char_count: Artikel mit weniger Zeichen werden aussortiert
+#   min_term_occurrences: Mindestanzahl Suchbegriff-Treffer im Artikeltext
+fulltext_filter:
+  min_char_count: 2000
+  min_term_occurrences: 4
+
 # Optional: Premiumzugänge für Paywall-Artikel
 # credentials:
 #   heise:

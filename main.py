@@ -137,7 +137,10 @@ async def run():
 
     # --- Volltextfilter ---
     scrape_count = writer.article_count
-    filter_result = filter_articles(csv_path, texte_dir)
+    filter_result = filter_articles(
+        csv_path, texte_dir,
+        config.min_char_count, config.min_term_occurrences,
+    )
 
     # Summary
     print(f"\n{'='*70}")

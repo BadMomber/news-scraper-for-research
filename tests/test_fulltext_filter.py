@@ -290,6 +290,23 @@ class TestFilterArticles:
 
         assert "Mein Titel" in result.removed_titles
 
+    def test_custom_thresholds(self, tmp_path):
+        csv_path = tmp_path / "out.csv"
+        texte_dir = tmp_path / "texte"
+        texte_dir.mkdir()
+
+        # 2 term occurrences, 100 chars: fails defaults, passes custom thresholds
+        _write_text_file(texte_dir, "a.txt", "Grok trifft Hitler")
+        _write_test_csv(csv_path, [
+            ["2025-10-01", "url", "Titel", "A", "Grok+Hitler", "100", "", "a.txt"],
+        ])
+
+        result = filter_articles(
+            csv_path, texte_dir, min_char_count=50, min_term_occurrences=2,
+        )
+
+        assert result.kept == 1
+
     def test_case_insensitive_filter(self, tmp_path):
         csv_path = tmp_path / "out.csv"
         texte_dir = tmp_path / "texte"

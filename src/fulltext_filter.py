@@ -4,11 +4,14 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from src.config import load_config
+
 logger = logging.getLogger(__name__)
 
-# Hard exclusion criteria: articles with fewer than 2000 characters or
-# fewer than four search-term occurrences in the body are removed.
-# Boundary values (exactly 2000 / exactly 4) are kept.
+# Default hard exclusion criteria: articles with fewer than 2000
+# characters or fewer than four search-term occurrences in the body are
+# removed. Boundary values (exactly 2000 / exactly 4) are kept.
+# Configurable via the "fulltext_filter" section in seed.yaml.
 MIN_CHAR_COUNT = 2000
 MIN_TERM_OCCURRENCES = 4
 
@@ -61,29 +64,44 @@ def _count_term_occurrences(text: str, search_terms: str) -> int:
     return sum(text_lower.count(word) for word in _unique_keywords(search_terms))
 
 
-def _exclusion_reason(text: str, search_terms: str, char_count: int) -> str | None:
+def _exclusion_reason(
+    text: str,
+    search_terms: str,
+    char_count: int,
+    min_char_count: int,
+    min_term_occurrences: int,
+) -> str | None:
     """Return why an article is excluded, or None if it passes all criteria."""
     if not _any_pair_matches(text, search_terms):
         return "kein Suchbegriff-Paar im Text"
-    if char_count < MIN_CHAR_COUNT:
-        return f"unter {MIN_CHAR_COUNT} Zeichen ({char_count})"
+    if char_count < min_char_count:
+        return f"unter {min_char_count} Zeichen ({char_count})"
     occurrences = _count_term_occurrences(text, search_terms)
-    if occurrences < MIN_TERM_OCCURRENCES:
+    if occurrences < min_term_occurrences:
         return (
-            f"weniger als {MIN_TERM_OCCURRENCES} Suchbegriff-Treffer"
+            f"weniger als {min_term_occurrences} Suchbegriff-Treffer"
             f" ({occurrences})"
         )
     return None
 
 
-def filter_articles(csv_path: Path, texte_dir: Path) -> FilterResult:
+def filter_articles(
+    csv_path: Path,
+    texte_dir: Path,
+    min_char_count: int = MIN_CHAR_COUNT,
+    min_term_occurrences: int = MIN_TERM_OCCURRENCES,
+) -> FilterResult:
     """Apply the hard exclusion criteria to already crawled results.
 
     Removes articles whose text contains none of their keyword pairs,
-    has fewer than MIN_CHAR_COUNT characters, or fewer than
-    MIN_TERM_OCCURRENCES search-term occurrences. Rewrites the CSV with
+    has fewer than min_char_count characters, or fewer than
+    min_term_occurrences search-term occurrences. Rewrites the CSV with
     only the kept articles and deletes text files of removed ones.
     """
+    logger.info(
+        "Volltextfilter: Kriterien min. %d Zeichen, min. %d Suchbegriff-Treffer",
+        min_char_count, min_term_occurrences,
+    )
     with open(csv_path, encoding="utf-8") as f:
         reader = csv.reader(f)
         header = next(reader)
@@ -114,7 +132,9 @@ def filter_articles(csv_path: Path, texte_dir: Path) -> FilterResult:
         except ValueError:
             char_count = len(text)
 
-        reason = _exclusion_reason(text, search_terms, char_count)
+        reason = _exclusion_reason(
+            text, search_terms, char_count, min_char_count, min_term_occurrences,
+        )
         if reason is None:
             kept_rows.append(row)
         else:
@@ -164,10 +184,24 @@ def main() -> None:
         "--texte", type=Path, default=Path("texte"),
         help="Verzeichnis mit den Artikel-Textdateien (Default: texte/)",
     )
+    parser.add_argument(
+        "--seed", type=Path, default=Path("seed.yaml"),
+        help="Pfad zur seed.yaml mit den Filter-Schwellwerten (Default: seed.yaml)",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-    filter_articles(args.csv, args.texte)
+
+    min_char_count = MIN_CHAR_COUNT
+    min_term_occurrences = MIN_TERM_OCCURRENCES
+    if args.seed.exists():
+        config = load_config(args.seed)
+        min_char_count = config.min_char_count
+        min_term_occurrences = config.min_term_occurrences
+    else:
+        logger.info("Keine %s gefunden — verwende Default-Schwellwerte", args.seed)
+
+    filter_articles(args.csv, args.texte, min_char_count, min_term_occurrences)
 
 
 if __name__ == "__main__":

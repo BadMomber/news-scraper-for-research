@@ -93,3 +93,55 @@ def test_load_config_partial_credentials(tmp_path):
 
     assert "zeit" in config.credentials
     assert "heise" not in config.credentials
+
+
+def test_load_config_filter_defaults(tmp_path):
+    seed = {
+        "search_terms": {"cat": [["a", "b"]]},
+        "target_sites": ["https://example.com"],
+        "date_range": {"start": "2025-01-01", "end": "2025-12-31"},
+    }
+    path = tmp_path / "seed.yaml"
+    path.write_text(yaml.dump(seed), encoding="utf-8")
+
+    config = load_config(path)
+
+    assert config.min_char_count == 2000
+    assert config.min_term_occurrences == 4
+
+
+def test_load_config_filter_custom_values(tmp_path):
+    seed = {
+        "search_terms": {"cat": [["a", "b"]]},
+        "target_sites": ["https://example.com"],
+        "date_range": {"start": "2025-01-01", "end": "2025-12-31"},
+        "fulltext_filter": {
+            "min_char_count": 500,
+            "min_term_occurrences": 2,
+        },
+    }
+    path = tmp_path / "seed.yaml"
+    path.write_text(yaml.dump(seed), encoding="utf-8")
+
+    config = load_config(path)
+
+    assert config.min_char_count == 500
+    assert config.min_term_occurrences == 2
+
+
+def test_load_config_filter_partial_section(tmp_path):
+    seed = {
+        "search_terms": {"cat": [["a", "b"]]},
+        "target_sites": ["https://example.com"],
+        "date_range": {"start": "2025-01-01", "end": "2025-12-31"},
+        "fulltext_filter": {
+            "min_char_count": 1000,
+        },
+    }
+    path = tmp_path / "seed.yaml"
+    path.write_text(yaml.dump(seed), encoding="utf-8")
+
+    config = load_config(path)
+
+    assert config.min_char_count == 1000
+    assert config.min_term_occurrences == 4

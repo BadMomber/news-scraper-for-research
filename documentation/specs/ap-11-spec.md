@@ -14,14 +14,14 @@ Diese Kriterien werden in den bestehenden Volltextfilter (AP10) integriert. Der 
 
 ### Kriterium 1: Mindestlänge
 
-- Artikel mit **Character Count < 2000** werden entfernt
-- Grenzwert: genau 2000 Zeichen wird **behalten** (nur „unter 2000" schließt aus)
+- Artikel mit **Character Count < `min_char_count`** (Default 2000) werden entfernt
+- Grenzwert: genau `min_char_count` Zeichen wird **behalten** (nur „unter" schließt aus)
 - Grundlage ist die CSV-Spalte „Character Count"; ist sie leer oder ungültig, wird die Länge der Textdatei verwendet
 
 ### Kriterium 2: Mindest-Trefferzahl
 
-- Artikel mit **weniger als 4 Suchbegriff-Treffern** im Artikeltext werden entfernt
-- Grenzwert: genau 4 Treffer wird **behalten** (nur „weniger als 4" schließt aus)
+- Artikel mit **weniger als `min_term_occurrences` Suchbegriff-Treffern** (Default 4) im Artikeltext werden entfernt
+- Grenzwert: genau `min_term_occurrences` Treffer wird **behalten** (nur „weniger als" schließt aus)
 - **Zählweise: Summe aller Vorkommen aller Suchwörter:**
   - Alle Wörter aller zugeordneten Keyword-Paare werden berücksichtigt; ein Wort, das in mehreren Paaren vorkommt (z.B. „Grok"), zählt nur einmal als Suchwort
   - Jedes Vorkommen jedes Suchworts im Text zählt als ein Treffer
@@ -34,10 +34,21 @@ Diese Kriterien werden in den bestehenden Volltextfilter (AP10) integriert. Der 
 - Entfernte Artikel: aus der CSV entfernt, Textdatei in `texte/` gelöscht
 - Pro entferntem Artikel wird der **Grund geloggt** (kein Paar / unter 2000 Zeichen / unter 4 Treffer)
 
+### Konfiguration
+
+- Die Schwellwerte sind über den Abschnitt `fulltext_filter` in `seed.yaml` konfigurierbar:
+  ```yaml
+  fulltext_filter:
+    min_char_count: 2000
+    min_term_occurrences: 4
+  ```
+- Fehlt der Abschnitt (oder einzelne Werte), gelten die Defaults 2000 / 4
+
 ### Eigenständiger Aufruf (ohne neuen Crawl)
 
 - `python -m src.fulltext_filter` wendet den Filter auf bestehende lokale Ergebnisse an
-- Optionen: `--csv` (Default: `ergebnisse.csv`), `--texte` (Default: `texte/`)
+- Optionen: `--csv` (Default: `ergebnisse.csv`), `--texte` (Default: `texte/`), `--seed` (Default: `seed.yaml`)
+- Existiert die seed-Datei nicht, gelten die Default-Schwellwerte
 - Der Filter bleibt zusätzlich Teil des normalen Gesamtlaufs (`main.py`)
 
 ## Akzeptanzkriterien
@@ -48,6 +59,8 @@ Diese Kriterien werden in den bestehenden Volltextfilter (AP10) integriert. Der 
 - [x] Das AP10-Kriterium (mindestens ein Paar vollständig im Text) gilt weiterhin
 - [x] Der Entfernungsgrund wird pro Artikel geloggt und im FilterResult zurückgegeben
 - [x] Der Filter ist ohne neuen Crawl auf lokale Daten anwendbar (`python -m src.fulltext_filter`)
+- [x] Die Schwellwerte sind über `seed.yaml` konfigurierbar; ohne Konfiguration gelten 2000 / 4
+- [x] Der Volltextfilter ist in der README ausführlich beschrieben
 - [x] main.py bleibt unverändert lauffähig (Filter läuft weiterhin im Gesamtlauf)
 
 ## Bekannte Grenzen der Kriterien

@@ -226,6 +226,16 @@ credentials:
 
 Ohne diesen Abschnitt funktioniert der Crawler trotzdem — Paywall-Artikel werden dann nur mit dem sichtbaren Teaser-Text gespeichert.
 
+### Volltextfilter-Schwellwerte (optional)
+
+```yaml
+fulltext_filter:
+  min_char_count: 2000
+  min_term_occurrences: 4
+```
+
+Steuert, welche Artikel nach dem Crawlen aussortiert werden. Fehlt der Abschnitt, gelten die gezeigten Defaults. Was die Werte bedeuten und wie der Filter arbeitet, steht im Abschnitt [Der Volltextfilter](#der-volltextfilter).
+
 **Wichtig:** `seed.yaml` enthält ggf. Passwörter und wird nicht ins Git eingecheckt (steht in `.gitignore`).
 
 ---
@@ -256,6 +266,64 @@ Erster Absatz des Artikels...
 
 Weiterer Absatz...
 ```
+
+---
+
+## Der Volltextfilter
+
+Suchmaschinen von Nachrichtenseiten liefern auch Artikel, die die Suchbegriffe nur in Metadaten oder am Rande erwähnen. Der Volltextfilter sortiert solche Treffer nach dem Crawlen automatisch aus, damit im Ergebnis nur Artikel mit ausreichend Substanz und tatsächlichem Themenbezug landen.
+
+### Wann läuft der Filter?
+
+Automatisch bei jedem Gesamtlauf (`python main.py`), nach dem Scraping und vor der Verifikation. Zusätzlich kann er jederzeit eigenständig auf bereits vorhandene Ergebnisse angewendet werden, ohne neu zu crawlen:
+
+```bash
+python -m src.fulltext_filter
+```
+
+Optionen:
+
+| Option | Beschreibung | Default |
+|--------|-------------|---------|
+| `--csv` | Pfad zur Ergebnis-CSV | `ergebnisse.csv` |
+| `--texte` | Verzeichnis mit den Textdateien | `texte/` |
+| `--seed` | Pfad zur `seed.yaml` mit den Schwellwerten | `seed.yaml` |
+
+Existiert die `seed.yaml` nicht, laufen die Default-Schwellwerte (2000 Zeichen, 4 Treffer).
+
+### Die drei Kriterien
+
+Jeder Artikel wird gegen drei Kriterien geprüft. Verletzt er eines, wird er aussortiert; das erste verletzte Kriterium wird als Grund geloggt.
+
+**1. Themenbezug:** Mindestens eines der Suchbegriff-Paare, über die der Artikel gefunden wurde, muss vollständig im Artikeltext vorkommen. Beide Wörter müssen irgendwo im Text stehen — nicht nebeneinander. Ein Artikel, der bei der Suche nach `["Grok", "Hitler"]` gefunden wurde, aber keines oder nur eines der Wörter im Text enthält, fliegt raus.
+
+**2. Mindestlänge** (`min_char_count`, Default 2000): Artikel mit weniger Zeichen werden aussortiert — typischerweise Kurzmeldungen ohne Substanz. Grundlage ist die Spalte „Character Count" der CSV. Ein Artikel mit genau 2000 Zeichen bleibt erhalten.
+
+**3. Mindest-Trefferzahl** (`min_term_occurrences`, Default 4): Der Artikel muss die Suchbegriffe insgesamt oft genug erwähnen. Gezählt wird die **Summe aller Vorkommen aller Suchwörter** aus den Paaren, über die der Artikel gefunden wurde:
+
+- Jedes Vorkommen jedes Suchworts zählt einen Treffer
+- Ein Wort, das in mehreren Paaren vorkommt, zählt nur einmal als Suchwort (seine Vorkommen werden nicht doppelt gezählt)
+- Ein Artikel mit genau 4 Treffern bleibt erhalten
+
+Beispiel: Ein Artikel wurde über das Paar `["Grok", "Hitler"]` gefunden. Im Text steht 3× „Grok" und 2× „Hitler" → 5 Treffer → der Artikel bleibt. Stünde dort nur 2× „Grok" und 1× „Hitler", wären es 3 Treffer → der Artikel wird aussortiert.
+
+Die Suche ist in allen Kriterien **case-insensitive**, und Teilwörter zählen: „Groks Antwort" enthält „Grok".
+
+### Was mit aussortierten Artikeln passiert
+
+Aussortierte Artikel werden **aus der CSV entfernt und ihre Textdatei in `texte/` gelöscht**. Der Filter legt kein Backup an — wer die ungefilterten Daten behalten will, kopiert `ergebnisse.csv` und `texte/` vorher weg. Jeder entfernte Artikel wird mit Titel und Grund geloggt, am Ende steht eine Zusammenfassung:
+
+```
+INFO src.fulltext_filter: Volltextfilter: Kriterien min. 2000 Zeichen, min. 4 Suchbegriff-Treffer
+INFO src.fulltext_filter: Volltextfilter: 390 Artikel → 282 behalten, 108 entfernt
+INFO src.fulltext_filter:   Entfernt (unter 2000 Zeichen (948)): Beispiel-Titel ...
+INFO src.fulltext_filter:   Entfernt (weniger als 4 Suchbegriff-Treffer (2)): Anderer Titel ...
+```
+
+### Bekannte Grenzen
+
+- **Paywall-Teaser:** Konnte nur der Teaser statt des Volltexts geladen werden (kein Premiumzugang konfiguriert), greifen die Kriterien auf dem Teaser — lange Paywall-Artikel können dadurch an der Mindestlänge scheitern.
+- **Abkürzungen und Synonyme:** Gezählt wird nur das wörtliche Suchwort. Ein Artikel, der durchgehend „KI" statt „Künstliche Intelligenz" schreibt, erreicht die Trefferzahl für das ausgeschriebene Suchwort nicht.
 
 ---
 
